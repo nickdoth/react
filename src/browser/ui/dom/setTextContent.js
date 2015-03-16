@@ -30,7 +30,7 @@ var setTextContent = function(node, text) {
 };
 
 if (ExecutionEnvironment.canUseDOM) {
-  if (!('textContent' in document.documentElement)) {
+  if (!('textContent' in window.document.documentElement)) {
     setTextContent = function(node, text) {
       setInnerHTML(node, escapeTextContentForBrowser(text));
     };

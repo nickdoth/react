@@ -17,7 +17,7 @@ var invariant = require('invariant');
  * Dummy container used to detect which wraps are necessary.
  */
 var dummyNode =
-  ExecutionEnvironment.canUseDOM ? document.createElement('div') : null;
+  ExecutionEnvironment.canUseDOM ? window.document.createElement('div') : null;
 
 /**
  * Some browsers cannot use `innerHTML` to render certain elements standalone,

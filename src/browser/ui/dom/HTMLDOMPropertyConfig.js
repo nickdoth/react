@@ -28,7 +28,7 @@ var HAS_OVERLOADED_BOOLEAN_VALUE =
 
 var hasSVG;
 if (ExecutionEnvironment.canUseDOM) {
-  var implementation = document.implementation;
+  var implementation = window.document.implementation;
   hasSVG = (
     implementation &&
     implementation.hasFeature &&

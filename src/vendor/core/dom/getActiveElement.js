@@ -16,11 +16,12 @@
  *
  * The activeElement will be null only if the document body is not yet defined.
  */
+// TODO: Need to get the current window object from callers. Block errors for now.
 function getActiveElement() /*?DOMElement*/ {
   try {
-    return document.activeElement || document.body;
+    return window.document.activeElement || window.document.body;
   } catch (e) {
-    return document.body;
+    return window.document.body;
   }
 }
 

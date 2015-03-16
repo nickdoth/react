@@ -30,8 +30,8 @@ var canUseCompositionEvent = (
 );
 
 var documentMode = null;
-if (ExecutionEnvironment.canUseDOM && 'documentMode' in document) {
-  documentMode = document.documentMode;
+if (ExecutionEnvironment.canUseDOM && 'documentMode' in window.document) {
+  documentMode = window.document.documentMode;
 }
 
 // Webkit offers a very useful `textInput` event that can be used to

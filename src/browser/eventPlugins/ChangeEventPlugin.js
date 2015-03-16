@@ -11,6 +11,7 @@
 
 'use strict';
 
+var document = window.document;
 var EventConstants = require('EventConstants');
 var EventPluginHub = require('EventPluginHub');
 var EventPropagators = require('EventPropagators');

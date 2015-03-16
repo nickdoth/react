@@ -11,6 +11,7 @@
 
 'use strict';
 
+var document = window.document;
 var ExecutionEnvironment = require('ExecutionEnvironment');
 
 var useHasFeature;

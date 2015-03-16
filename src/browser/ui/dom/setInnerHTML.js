@@ -46,7 +46,7 @@ if (ExecutionEnvironment.canUseDOM) {
   // @see quirksmode.org/bugreports/archives/2004/11/innerhtml_and_t.html
 
   // Feature detection; only IE8 is known to behave improperly like this.
-  var testElement = document.createElement('div');
+  var testElement = window.document.createElement('div');
   testElement.innerHTML = ' ';
   if (testElement.innerHTML === '') {
     setInnerHTML = function(node, html) {

@@ -22,7 +22,7 @@ var invariant = require('invariant');
  * Dummy container used to render all markup.
  */
 var dummyNode =
-  ExecutionEnvironment.canUseDOM ? document.createElement('div') : null;
+  ExecutionEnvironment.canUseDOM ? window.document.createElement('div') : null;
 
 /**
  * Pattern used by `getNodeName`.

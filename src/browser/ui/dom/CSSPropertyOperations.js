@@ -28,9 +28,9 @@ var processStyleName = memoizeStringOnly(function(styleName) {
 var styleFloatAccessor = 'cssFloat';
 if (ExecutionEnvironment.canUseDOM) {
   // IE8 only supports accessing cssFloat (standard) as styleFloat
-  if (document.documentElement.style.cssFloat === undefined) {
-    styleFloatAccessor = 'styleFloat';
-  }
+  // if (document.documentElement.style.cssFloat === undefined) {
+  //   styleFloatAccessor = 'styleFloat';
+  // }
 }
 
 if (__DEV__) {

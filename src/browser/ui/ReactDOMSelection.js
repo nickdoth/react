@@ -191,7 +191,7 @@ function setModernOffsets(node, offsets) {
 
 var useIEOffsets = (
   ExecutionEnvironment.canUseDOM &&
-  'selection' in document &&
+  'selection' in window.document &&
   !('getSelection' in window)
 );
 
