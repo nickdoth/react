@@ -30,7 +30,7 @@ var ReactPerf = require('ReactPerf');
 var ReactPropTypes = require('ReactPropTypes');
 var ReactReconciler = require('ReactReconciler');
 var ReactServerRendering = require('ReactServerRendering');
-var ReactMultiWindowHelper = require('./ReactMultiWindowHelper');
+var ReactMultiWindowHelper = require('ReactMultiWindowHelper');
 
 var assign = require('Object.assign');
 var findDOMNode = require('findDOMNode');
