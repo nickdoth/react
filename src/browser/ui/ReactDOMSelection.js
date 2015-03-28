@@ -15,6 +15,7 @@ var ExecutionEnvironment = require('ExecutionEnvironment');
 
 var getNodeForCharacterOffset = require('getNodeForCharacterOffset');
 var getTextContentAccessor = require('getTextContentAccessor');
+var getContainWindowOfNode = require('ReactMultiWindowHelper').getContainWindowOfNode;
 
 /**
  * While `isCollapsed` is available on the Selection object and `collapsed`
@@ -40,7 +41,8 @@ function isCollapsed(anchorNode, anchorOffset, focusNode, focusOffset) {
  * @return {object}
  */
 function getIEOffsets(node) {
-  var selection = document.selection;
+  var window = getContainWindowOfNode(node);
+  var selection = window.document.selection;
   var selectedRange = selection.createRange();
   var selectedLength = selectedRange.text.length;
 
@@ -63,6 +65,7 @@ function getIEOffsets(node) {
  * @return {?object}
  */
 function getModernOffsets(node) {
+  var window = getContainWindowOfNode(node);
   var selection = window.getSelection && window.getSelection();
 
   if (!selection || selection.rangeCount === 0) {
@@ -119,7 +122,8 @@ function getModernOffsets(node) {
  * @param {object} offsets
  */
 function setIEOffsets(node, offsets) {
-  var range = document.selection.createRange().duplicate();
+  var window = getContainWindowOfNode(node);
+  var range = window.document.selection.createRange().duplicate();
   var start, end;
 
   if (typeof offsets.end === 'undefined') {
@@ -153,6 +157,7 @@ function setIEOffsets(node, offsets) {
  * @param {object} offsets
  */
 function setModernOffsets(node, offsets) {
+  var window = getContainWindowOfNode(node);
   if (!window.getSelection) {
     return;
   }

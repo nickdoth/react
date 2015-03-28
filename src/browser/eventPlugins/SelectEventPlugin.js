@@ -20,6 +20,7 @@ var getActiveElement = require('getActiveElement');
 var isTextInputElement = require('isTextInputElement');
 var keyOf = require('keyOf');
 var shallowEqual = require('shallowEqual');
+var getContainWindowOfNode = require('ReactMultiWindowHelper').getContainWindowOfNode;
 
 var topLevelTypes = EventConstants.topLevelTypes;
 
@@ -56,6 +57,7 @@ var mouseDown = false;
  * @param {object}
  */
 function getSelection(node) {
+  var window = getContainWindowOfNode(node);
   if ('selectionStart' in node &&
       ReactInputSelection.hasSelectionCapabilities(node)) {
     return {
@@ -70,8 +72,8 @@ function getSelection(node) {
       focusNode: selection.focusNode,
       focusOffset: selection.focusOffset
     };
-  } else if (document.selection) {
-    var range = document.selection.createRange();
+  } else if (window.document.selection) {
+    var range = window.document.selection.createRange();
     return {
       parentElement: range.parentElement(),
       text: range.text,

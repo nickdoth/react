@@ -23,10 +23,10 @@
  * @return {object} Map with `x` and `y` keys.
  */
 function getUnboundedScrollPosition(scrollable) {
-  if (scrollable === window) {
+  if (Object.prototype.toString.call(scrollable) === '[object Window]') {
     return {
-      x: window.pageXOffset || document.documentElement.scrollLeft,
-      y: window.pageYOffset || document.documentElement.scrollTop
+      x: scrollable.pageXOffset || scrollable.document.documentElement.scrollLeft,
+      y: scrollable.pageYOffset || scrollable.document.documentElement.scrollTop
     };
   }
   return {

@@ -11,14 +11,15 @@
 
 'use strict';
 
-var ReactDOMSelection = require('ReactDOMSelection');
+var ReactDOMSelection = require("./ReactDOMSelection");
 
-var containsNode = require('containsNode');
-var focusNode = require('focusNode');
-var getActiveElement = require('getActiveElement');
+var containsNode = require("./containsNode");
+var focusNode = require("./focusNode");
+var getActiveElement = require("./getActiveElement");
 
 function isInDocument(node) {
-  return containsNode(document.documentElement, node);
+  // return containsNode(document.documentElement, node);
+  return !!node.ownerDocument;
 }
 
 /**
@@ -31,9 +32,8 @@ var ReactInputSelection = {
 
   hasSelectionCapabilities: function(elem) {
     return elem && (
-      (elem.nodeName === 'INPUT' && elem.type === 'text') ||
-      elem.nodeName === 'TEXTAREA' ||
-      elem.contentEditable === 'true'
+      ((elem.nodeName === 'INPUT' && elem.type === 'text') ||
+      elem.nodeName === 'TEXTAREA' || elem.contentEditable === 'true')
     );
   },
 
@@ -77,6 +77,7 @@ var ReactInputSelection = {
    */
   getSelection: function(input) {
     var selection;
+    var document = input.ownerDocument;
 
     if ('selectionStart' in input) {
       // Modern browser with input or textarea.
@@ -110,6 +111,7 @@ var ReactInputSelection = {
    * -@offsets   Object of same form that is returned from get*
    */
   setSelection: function(input, offsets) {
+    var document = input.ownerDocument;
     var start = offsets.start;
     var end = offsets.end;
     if (typeof end === 'undefined') {

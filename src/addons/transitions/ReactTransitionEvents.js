@@ -39,7 +39,7 @@ var EVENT_NAME_MAP = {
 var endEvents = [];
 
 function detectEvents() {
-  var testEl = document.createElement('div');
+  var testEl = window.document.createElement('div');
   var style = testEl.style;
 
   // On some platforms, in particular some releases of Android 4.x,

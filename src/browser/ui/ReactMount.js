@@ -524,7 +524,7 @@ var ReactMount = {
    * @return {ReactComponent} Component instance rendered in the container node.
    */
   constructAndRenderComponentByID: function(constructor, props, id) {
-    var domNode = document.getElementById(id);
+    var domNode = window.document.getElementById(id);
     invariant(
       domNode,
       'Tried to get element with id of "%s" but it is not present on the page.',

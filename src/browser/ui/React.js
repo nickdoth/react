@@ -30,6 +30,7 @@ var ReactPerf = require('ReactPerf');
 var ReactPropTypes = require('ReactPropTypes');
 var ReactReconciler = require('ReactReconciler');
 var ReactServerRendering = require('ReactServerRendering');
+var ReactMultiWindowHelper = require('./ReactMultiWindowHelper');
 
 var assign = require('Object.assign');
 var findDOMNode = require('findDOMNode');
@@ -76,6 +77,7 @@ var React = {
   render: render,
   renderToString: ReactServerRendering.renderToString,
   renderToStaticMarkup: ReactServerRendering.renderToStaticMarkup,
+  renderNewWindow: ReactMultiWindowHelper.renderNewWindow,
   unmountComponentAtNode: ReactMount.unmountComponentAtNode,
   isValidElement: ReactElement.isValidElement,
   withContext: ReactContext.withContext,
