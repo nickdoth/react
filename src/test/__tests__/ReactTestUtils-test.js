@@ -25,12 +25,12 @@ describe('ReactTestUtils', function() {
     React = require('React');
     ReactTestUtils = require('ReactTestUtils');
 
-    warn = console.warn;
-    console.warn = mocks.getMockFunction();
+    warn = console.error;
+    console.error = mocks.getMockFunction();
   });
 
   afterEach(function() {
-    console.warn = warn;
+    console.error = warn;
   });
 
   it('should have shallow rendering', function() {
@@ -46,7 +46,7 @@ describe('ReactTestUtils', function() {
     });
 
     var shallowRenderer = ReactTestUtils.createRenderer();
-    shallowRenderer.render(<SomeComponent />, {});
+    shallowRenderer.render(<SomeComponent />);
 
     var result = shallowRenderer.getRenderOutput();
 
@@ -68,7 +68,7 @@ describe('ReactTestUtils', function() {
     });
 
     var shallowRenderer = ReactTestUtils.createRenderer();
-    shallowRenderer.render(<SomeComponent />, {});
+    shallowRenderer.render(<SomeComponent />);
     shallowRenderer.unmount();
 
     expect(componentWillUnmount).toBeCalled();
@@ -82,7 +82,7 @@ describe('ReactTestUtils', function() {
     });
 
     var shallowRenderer = ReactTestUtils.createRenderer();
-    shallowRenderer.render(<SomeComponent />, {});
+    shallowRenderer.render(<SomeComponent />);
 
     var result = shallowRenderer.getRenderOutput();
 
@@ -123,7 +123,7 @@ describe('ReactTestUtils', function() {
     });
 
     var shallowRenderer = ReactTestUtils.createRenderer();
-    shallowRenderer.render(<SomeComponent />, {});
+    shallowRenderer.render(<SomeComponent />);
     var result = shallowRenderer.getRenderOutput();
     expect(result.type).toBe('div');
     expect(result.props.children).toEqual([
@@ -131,7 +131,7 @@ describe('ReactTestUtils', function() {
       <span className="child2" />
     ]);
 
-    shallowRenderer.render(<SomeComponent aNew="prop" />, {});
+    shallowRenderer.render(<SomeComponent aNew="prop" />);
     var updatedResult = shallowRenderer.getRenderOutput();
     expect(updatedResult.type).toBe('a');
 
@@ -141,6 +141,22 @@ describe('ReactTestUtils', function() {
     var updatedResultCausedByClick = shallowRenderer.getRenderOutput();
     expect(updatedResultCausedByClick.type).toBe('a');
     expect(updatedResultCausedByClick.props.className).toBe('was-clicked');
+  });
+
+  it('can shallowly render components with contextTypes', function() {
+    var SimpleComponent = React.createClass({
+      contextTypes: {
+        name: React.PropTypes.string,
+      },
+      render: function() {
+        return <div />;
+      },
+    });
+
+    var shallowRenderer = ReactTestUtils.createRenderer();
+    shallowRenderer.render(<SimpleComponent />);
+    var result = shallowRenderer.getRenderOutput();
+    expect(result).toEqual(<div />);
   });
 
   it('Test scryRenderedDOMComponentsWithClass with TextComponent', function() {
@@ -193,7 +209,7 @@ describe('ReactTestUtils', function() {
       }
     }
 
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
 
     var foo = ReactTestUtils.renderIntoDocument(<Foo />);
     expect(ReactTestUtils.isDOMComponent(foo)).toBe(false);
@@ -204,6 +220,57 @@ describe('ReactTestUtils', function() {
     var div = ReactTestUtils.renderIntoDocument(<div />);
     expect(ReactTestUtils.isDOMComponent(div)).toBe(true);
 
-    expect(console.warn.calls.length).toBe(0);
+    expect(console.error.calls.length).toBe(0);
+  });
+
+  it('should support injected wrapper components as DOM components', function() {
+    var getTestDocument = require('getTestDocument');
+
+    var injectedDOMComponents = [
+      'button',
+      'form',
+      'iframe',
+      'img',
+      'input',
+      'option',
+      'select',
+      'textarea'
+    ];
+
+    injectedDOMComponents.forEach(function(type) {
+      var component = ReactTestUtils.renderIntoDocument(
+        React.createElement(type)
+      );
+      expect(component.tagName).toBe(type.toUpperCase());
+      expect(ReactTestUtils.isDOMComponent(component)).toBe(true);
+    });
+
+    // Full-page components (html, head, body) can't be rendered into a div
+    // directly...
+    var Root = React.createClass({
+      render: function() {
+        return (
+          <html ref="html">
+            <head ref="head">
+              <title>hello</title>
+            </head>
+            <body ref="body">
+              hello, world
+            </body>
+          </html>
+        );
+      }
+    });
+
+    var markup = React.renderToString(<Root />);
+    var testDocument = getTestDocument(markup);
+    var component = React.render(<Root />, testDocument);
+
+    expect(component.refs.html.tagName).toBe('HTML');
+    expect(component.refs.head.tagName).toBe('HEAD');
+    expect(component.refs.body.tagName).toBe('BODY');
+    expect(ReactTestUtils.isDOMComponent(component.refs.html)).toBe(true);
+    expect(ReactTestUtils.isDOMComponent(component.refs.head)).toBe(true);
+    expect(ReactTestUtils.isDOMComponent(component.refs.body)).toBe(true);
   });
 });

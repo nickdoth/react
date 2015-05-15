@@ -37,19 +37,19 @@ describe('ReactElementValidator', function() {
   }
 
   it('warns for keys for arrays of elements in rest args', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
     var Component = React.createFactory(ComponentClass);
 
     Component(null, [Component(), Component()]);
 
-    expect(console.warn.argsForCall.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toContain(
+    expect(console.error.argsForCall.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toContain(
       'Each child in an array or iterator should have a unique "key" prop.'
     );
   });
 
   it('warns for keys for arrays of elements with owner info', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
     var Component = React.createFactory(ComponentClass);
 
     var InnerClass = React.createClass({
@@ -72,8 +72,8 @@ describe('ReactElementValidator', function() {
       React.createElement(ComponentWrapper)
     );
 
-    expect(console.warn.argsForCall.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toContain(
+    expect(console.error.argsForCall.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toContain(
       'Each child in an array or iterator should have a unique "key" prop. ' +
       'Check the render method of InnerClass. ' +
       'It was passed a child from ComponentWrapper. '
@@ -81,7 +81,7 @@ describe('ReactElementValidator', function() {
   });
 
   it('warns for keys for arrays with no owner or parent info', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
 
     var Anonymous = React.createClass({
       displayName: undefined,
@@ -96,15 +96,15 @@ describe('ReactElementValidator', function() {
     ];
     ReactTestUtils.renderIntoDocument(<Anonymous>{divs}</Anonymous>);
 
-    expect(console.warn.argsForCall.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toBe(
+    expect(console.error.argsForCall.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toBe(
       'Warning: Each child in an array or iterator should have a unique ' +
-      '"key" prop. See http://fb.me/react-warning-keys for more information.'
+      '"key" prop. See https://fb.me/react-warning-keys for more information.'
     );
   });
 
   it('warns for keys for arrays of elements with no owner info', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
 
     var divs = [
       <div />,
@@ -112,16 +112,90 @@ describe('ReactElementValidator', function() {
     ];
     ReactTestUtils.renderIntoDocument(<div>{divs}</div>);
 
-    expect(console.warn.argsForCall.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toBe(
+    expect(console.error.argsForCall.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toBe(
       'Warning: Each child in an array or iterator should have a unique ' +
       '"key" prop. Check the React.render call using <div>. See ' +
-      'http://fb.me/react-warning-keys for more information.'
+      'https://fb.me/react-warning-keys for more information.'
     );
   });
 
+  it('warns for keys for nested arrays of elements', function() {
+    spyOn(console, 'error');
+
+    var divs = [
+      [
+        <div />,
+        <div />
+      ],
+      <div key="foo" />
+    ];
+    ReactTestUtils.renderIntoDocument(<div>{divs}</div>);
+
+    expect(console.error.argsForCall.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toBe(
+      'Warning: Each child in a nested array or iterator should have a ' +
+      'unique "key" prop. Check the React.render call using <div>. See ' +
+      'https://fb.me/react-warning-keys for more information.'
+    );
+  });
+
+  it('warns for keys when reusing children', function() {
+    spyOn(console, 'error');
+
+    var f = <span />;
+    var g = <span />;
+
+    var children = [f, g];
+
+    ReactTestUtils.renderIntoDocument(
+      <div>
+        <div key="0">
+          {g}
+        </div>
+        <div key="1">
+          {f}
+        </div>
+        <div key="2">
+          {children}
+        </div>
+      </div>
+    );
+
+    expect(console.error.argsForCall.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toBe(
+      'Warning: Each child in an array or iterator should have a unique ' +
+      '"key" prop. Check the React.render call using <div>. See ' +
+      'https://fb.me/react-warning-keys for more information.'
+    );
+  });
+
+  it('does not warn for keys when passing children down', function() {
+    spyOn(console, 'error');
+
+    var Wrapper = React.createClass({
+      render: function() {
+        return (
+          <div>
+            {this.props.children}
+            <footer />
+          </div>
+        );
+      }
+    });
+
+    ReactTestUtils.renderIntoDocument(
+      <Wrapper>
+        <span />
+        <span />
+      </Wrapper>
+    );
+
+    expect(console.error.argsForCall.length).toBe(0);
+  });
+
   it('warns for keys for iterables of elements in rest args', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
     var Component = React.createFactory(ComponentClass);
 
     var iterable = {
@@ -138,23 +212,23 @@ describe('ReactElementValidator', function() {
 
     Component(null, iterable);
 
-    expect(console.warn.argsForCall.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toContain(
+    expect(console.error.argsForCall.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toContain(
       'Each child in an array or iterator should have a unique "key" prop.'
     );
   });
 
   it('does not warns for arrays of elements with keys', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
     var Component = React.createFactory(ComponentClass);
 
     Component(null, [Component({key: '#1'}), Component({key: '#2'})]);
 
-    expect(console.warn.argsForCall.length).toBe(0);
+    expect(console.error.argsForCall.length).toBe(0);
   });
 
   it('does not warns for iterable elements with keys', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
     var Component = React.createFactory(ComponentClass);
 
     var iterable = {
@@ -174,23 +248,23 @@ describe('ReactElementValidator', function() {
 
     Component(null, iterable);
 
-    expect(console.warn.argsForCall.length).toBe(0);
+    expect(console.error.argsForCall.length).toBe(0);
   });
 
   it('warns for numeric keys on objects in rest args', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
     var Component = React.createFactory(ComponentClass);
 
     Component(null, frag({1: Component(), 2: Component()}));
 
-    expect(console.warn.argsForCall.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toContain(
+    expect(console.error.argsForCall.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toContain(
       'Child objects should have non-numeric keys so ordering is preserved.'
     );
   });
 
   it('does not warn for numeric keys in entry iterables in rest args', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
     var Component = React.createFactory(ComponentClass);
 
     var iterable = {
@@ -208,25 +282,25 @@ describe('ReactElementValidator', function() {
 
     Component(null, iterable);
 
-    expect(console.warn.argsForCall.length).toBe(0);
+    expect(console.error.argsForCall.length).toBe(0);
   });
 
   it('does not warn when the element is directly in rest args', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
     var Component = React.createFactory(ComponentClass);
 
     Component(null, Component(), Component());
 
-    expect(console.warn.argsForCall.length).toBe(0);
+    expect(console.error.argsForCall.length).toBe(0);
   });
 
   it('does not warn when the array contains a non-element', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
     var Component = React.createFactory(ComponentClass);
 
     Component(null, [ {}, {} ]);
 
-    expect(console.warn.argsForCall.length).toBe(0);
+    expect(console.error.argsForCall.length).toBe(0);
   });
 
   // TODO: These warnings currently come from the composite component, but
@@ -236,7 +310,7 @@ describe('ReactElementValidator', function() {
     // In this test, we're making sure that if a proptype error is found in a
     // component, we give a small hint as to which parent instantiated that
     // component as per warnings about key usage in ReactElementValidator.
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
     var MyComp = React.createClass({
       propTypes: {
         color: React.PropTypes.string
@@ -251,34 +325,70 @@ describe('ReactElementValidator', function() {
       }
     });
     ReactTestUtils.renderIntoDocument(React.createElement(ParentComp));
-    expect(console.warn.calls[0].args[0]).toBe(
+    expect(console.error.calls[0].args[0]).toBe(
       'Warning: Failed propType: ' +
       'Invalid prop `color` of type `number` supplied to `MyComp`, ' +
       'expected `string`. Check the render method of `ParentComp`.'
     );
   });
 
-  it('gives a helpful error when passing null or undefined', function() {
-    spyOn(console, 'warn');
+  it('gives a helpful error when passing null, undefined, boolean, or number',
+      () => {
+    spyOn(console, 'error');
     React.createElement(undefined);
     React.createElement(null);
-    expect(console.warn.calls.length).toBe(2);
-    expect(console.warn.calls[0].args[0]).toBe(
-      'Warning: React.createElement: type should not be null or undefined. ' +
-      'It should be a string (for DOM elements) or a ReactClass (for ' +
-      'composite components).'
+    React.createElement(true);
+    React.createElement(123);
+    expect(console.error.calls.length).toBe(4);
+    expect(console.error.calls[0].args[0]).toBe(
+      'Warning: React.createElement: type should not be null, undefined, ' +
+      'boolean, or number. It should be a string (for DOM elements) or a ' +
+      'ReactClass (for composite components).'
     );
-    expect(console.warn.calls[1].args[0]).toBe(
-      'Warning: React.createElement: type should not be null or undefined. ' +
-      'It should be a string (for DOM elements) or a ReactClass (for ' +
-      'composite components).'
+    expect(console.error.calls[1].args[0]).toBe(
+      'Warning: React.createElement: type should not be null, undefined, ' +
+      'boolean, or number. It should be a string (for DOM elements) or a ' +
+      'ReactClass (for composite components).'
+    );
+    expect(console.error.calls[2].args[0]).toBe(
+      'Warning: React.createElement: type should not be null, undefined, ' +
+      'boolean, or number. It should be a string (for DOM elements) or a ' +
+      'ReactClass (for composite components).'
+    );
+    expect(console.error.calls[3].args[0]).toBe(
+      'Warning: React.createElement: type should not be null, undefined, ' +
+      'boolean, or number. It should be a string (for DOM elements) or a ' +
+      'ReactClass (for composite components).'
     );
     React.createElement('div');
-    expect(console.warn.calls.length).toBe(2);
+    expect(console.error.calls.length).toBe(4);
+  });
+
+  it('includes the owner name when passing null, undefined, boolean, or number',
+      () => {
+    spyOn(console, 'error');
+    var ParentComp = React.createClass({
+      render: function() {
+        return React.createElement(null);
+      }
+    });
+    expect(function() {
+      ReactTestUtils.renderIntoDocument(React.createElement(ParentComp));
+    }).toThrow();
+    expect(console.error.calls.length).toBe(2);
+    expect(console.error.calls[0].args[0]).toBe(
+      'Warning: React.createElement: type should not be null, undefined, ' +
+      'boolean, or number. It should be a string (for DOM elements) or a ' +
+      'ReactClass (for composite components). Check the render method of ' +
+      '`ParentComp`.'
+    );
+    expect(console.error.calls[1].args[0]).toBe(
+      'Warning: Only functions or strings can be mounted as React components.'
+    );
   });
 
   it('should check default prop values', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
 
     var Component = React.createClass({
       propTypes: {prop: React.PropTypes.string.isRequired},
@@ -292,15 +402,15 @@ describe('ReactElementValidator', function() {
 
     ReactTestUtils.renderIntoDocument(React.createElement(Component));
 
-    expect(console.warn.calls.length).toBe(1);
-    expect(console.warn.calls[0].args[0]).toBe(
+    expect(console.error.calls.length).toBe(1);
+    expect(console.error.calls[0].args[0]).toBe(
       'Warning: Failed propType: ' +
       'Required prop `prop` was not specified in `Component`.'
     );
   });
 
   it('should not check the default for explicit null', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
 
     var Component = React.createClass({
       propTypes: {prop: React.PropTypes.string.isRequired},
@@ -316,15 +426,15 @@ describe('ReactElementValidator', function() {
       React.createElement(Component, {prop:null})
     );
 
-    expect(console.warn.calls.length).toBe(1);
-    expect(console.warn.calls[0].args[0]).toBe(
+    expect(console.error.calls.length).toBe(1);
+    expect(console.error.calls[0].args[0]).toBe(
       'Warning: Failed propType: ' +
       'Required prop `prop` was not specified in `Component`.'
     );
   });
 
   it('should check declared prop types', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
 
     var Component = React.createClass({
       propTypes: {
@@ -342,13 +452,13 @@ describe('ReactElementValidator', function() {
       React.createElement(Component, {prop: 42})
     );
 
-    expect(console.warn.calls.length).toBe(2);
-    expect(console.warn.calls[0].args[0]).toBe(
+    expect(console.error.calls.length).toBe(2);
+    expect(console.error.calls[0].args[0]).toBe(
       'Warning: Failed propType: ' +
       'Required prop `prop` was not specified in `Component`.'
     );
 
-    expect(console.warn.calls[1].args[0]).toBe(
+    expect(console.error.calls[1].args[0]).toBe(
       'Warning: Failed propType: ' +
       'Invalid prop `prop` of type `number` supplied to ' +
       '`Component`, expected `string`.'
@@ -359,11 +469,11 @@ describe('ReactElementValidator', function() {
     );
 
     // Should not error for strings
-    expect(console.warn.calls.length).toBe(2);
+    expect(console.error.calls.length).toBe(2);
   });
 
   it('should warn if a PropType creator is used as a PropType', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
 
     var Component = React.createClass({
       propTypes: {
@@ -378,8 +488,8 @@ describe('ReactElementValidator', function() {
       React.createElement(Component, {myProp: {value: 'hi'}})
     );
 
-    expect(console.warn.calls.length).toBe(1);
-    expect(console.warn.calls[0].args[0]).toBe(
+    expect(console.error.calls.length).toBe(1);
+    expect(console.error.calls[0].args[0]).toBe(
       'Warning: Component: type specification of prop `myProp` is invalid; ' +
       'the type checker function must return `null` or an `Error` but ' +
       'returned a function. You may have forgotten to pass an argument to ' +
@@ -389,15 +499,15 @@ describe('ReactElementValidator', function() {
   });
 
   it('should warn if a fragment is used without the wrapper', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
     var child = React.createElement('span');
     React.createElement('div', null, {a: child, b: child});
-    expect(console.warn.calls.length).toBe(1);
-    expect(console.warn.calls[0].args[0]).toContain('use of a keyed object');
+    expect(console.error.calls.length).toBe(1);
+    expect(console.error.calls[0].args[0]).toContain('use of a keyed object');
   });
 
   it('should warn when accessing .type on an element factory', function() {
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
     var TestComponent = React.createClass({
       render: function() {
         return <div />;
@@ -405,14 +515,14 @@ describe('ReactElementValidator', function() {
     });
     var TestFactory = React.createFactory(TestComponent);
     expect(TestFactory.type).toBe(TestComponent);
-    expect(console.warn.argsForCall.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toBe(
+    expect(console.error.argsForCall.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toBe(
       'Warning: Factory.type is deprecated. Access the class directly before ' +
       'passing it to createFactory.'
     );
     // Warn once, not again
     expect(TestFactory.type).toBe(TestComponent);
-    expect(console.warn.argsForCall.length).toBe(1);
+    expect(console.error.argsForCall.length).toBe(1);
   });
 
 });

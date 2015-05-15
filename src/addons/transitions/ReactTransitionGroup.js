@@ -193,9 +193,11 @@ var ReactTransitionGroup = React.createClass({
       // This entered again before it fully left. Add it again.
       this.performEnter(key);
     } else {
-      var newChildren = assign({}, this.state.children);
-      delete newChildren[key];
-      this.setState({children: newChildren});
+      this.setState(function(state) {
+        var newChildren = assign({}, state.children);
+        delete newChildren[key];
+        return {children: newChildren};
+      });
     }
   },
 

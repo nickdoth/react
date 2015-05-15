@@ -17,6 +17,13 @@ describe('ReactMount', function() {
   var React = require('React');
   var ReactMount = require('ReactMount');
   var ReactTestUtils = require('ReactTestUtils');
+  var WebComponents = undefined;
+
+  try {
+    WebComponents = require('WebComponents');
+  } catch(e) {
+    /* leave WebComponents undefined */
+  }
 
   describe('constructAndRenderComponentByID', function() {
     it('throws if given an id for a component that doesn\'t exist', function() {
@@ -69,7 +76,7 @@ describe('ReactMount', function() {
 
   it('should render different components in same root', function() {
     var container = document.createElement('container');
-    document.documentElement.appendChild(container);
+    document.body.appendChild(container);
 
     ReactMount.render(<div></div>, container);
     expect(container.firstChild.nodeName).toBe('DIV');
@@ -125,36 +132,58 @@ describe('ReactMount', function() {
     var container = document.createElement('container');
     container.innerHTML = React.renderToString(<div />) + ' ';
 
-    console.warn = mocks.getMockFunction();
+    console.error = mocks.getMockFunction();
     ReactMount.render(<div />, container);
-    expect(console.warn.mock.calls.length).toBe(1);
+    expect(console.error.mock.calls.length).toBe(1);
 
     container.innerHTML = ' ' + React.renderToString(<div />);
 
-    console.warn = mocks.getMockFunction();
+    console.error = mocks.getMockFunction();
     ReactMount.render(<div />, container);
-    expect(console.warn.mock.calls.length).toBe(1);
+    expect(console.error.mock.calls.length).toBe(1);
   });
 
   it('should not warn if mounting into non-empty node', function() {
     var container = document.createElement('container');
     container.innerHTML = '<div></div>';
 
-    console.warn = mocks.getMockFunction();
+    console.error = mocks.getMockFunction();
     ReactMount.render(<div />, container);
-    expect(console.warn.mock.calls.length).toBe(0);
+    expect(console.error.mock.calls.length).toBe(0);
   });
 
   it('should warn when mounting into document.body', function () {
     var iFrame = document.createElement('iframe');
     document.body.appendChild(iFrame);
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
 
     ReactMount.render(<div />, iFrame.contentDocument.body);
 
-    expect(console.warn.calls.length).toBe(1);
-    expect(console.warn.calls[0].args[0]).toContain(
+    expect(console.error.calls.length).toBe(1);
+    expect(console.error.calls[0].args[0]).toContain(
       'Rendering components directly into document.body is discouraged'
     );
+  });
+
+  (WebComponents === undefined ? xit : it)
+      ('should allow mounting/unmounting to document fragment container', function() {
+    var shadowRoot;
+    var proto = Object.create(HTMLElement.prototype, {
+      createdCallback: {
+        value: function() {
+            shadowRoot = this.createShadowRoot();
+            React.render(<div>Hi, from within a WC!</div>, shadowRoot);
+            expect(shadowRoot.firstChild.tagName).toBe('DIV');
+            React.render(<span>Hi, from within a WC!</span>, shadowRoot);
+            expect(shadowRoot.firstChild.tagName).toBe('SPAN');
+        }
+      }
+    });
+    proto.unmount = function() {
+      React.unmountComponentAtNode(shadowRoot);
+    };
+    document.registerElement('x-foo', {prototype: proto});
+    var element = document.createElement('x-foo');
+    element.unmount();
   });
 });

@@ -26,6 +26,7 @@ var ReactUpdates = require('ReactUpdates');
 var SyntheticEvent = require('SyntheticEvent');
 
 var assign = require('Object.assign');
+var emptyObject = require('emptyObject');
 var findDOMNode = require('findDOMNode');
 
 var topLevelTypes = EventConstants.topLevelTypes;
@@ -369,6 +370,9 @@ assign(
 );
 
 ReactShallowRenderer.prototype.render = function(element, context) {
+  if (!context) {
+    context = emptyObject;
+  }
   var transaction = ReactUpdates.ReactReconcileTransaction.getPooled();
   this._render(element, transaction, context);
   ReactUpdates.ReactReconcileTransaction.release(transaction);
@@ -411,17 +415,25 @@ function makeSimulator(eventType) {
       node = domComponentOrNode;
     }
 
+    var dispatchConfig =
+      ReactBrowserEventEmitter.eventNameDispatchConfigs[eventType];
+
     var fakeNativeEvent = new Event();
     fakeNativeEvent.target = node;
     // We don't use SyntheticEvent.getPooled in order to not have to worry about
     // properly destroying any properties assigned from `eventData` upon release
     var event = new SyntheticEvent(
-      ReactBrowserEventEmitter.eventNameDispatchConfigs[eventType],
+      dispatchConfig,
       ReactMount.getID(node),
       fakeNativeEvent
     );
     assign(event, eventData);
-    EventPropagators.accumulateTwoPhaseDispatches(event);
+
+    if (dispatchConfig.phasedRegistrationNames) {
+      EventPropagators.accumulateTwoPhaseDispatches(event);
+    } else {
+      EventPropagators.accumulateDirectDispatches(event);
+    }
 
     ReactUpdates.batchedUpdates(function() {
       EventPluginHub.enqueueEvents(event);

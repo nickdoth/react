@@ -235,9 +235,14 @@ class NormalLifeCycles {
 // warns when classic properties are defined on the instance,
 // but does not invoke them.
 var getInitialStateWasCalled = false;
+var getDefaultPropsWasCalled = false;
 class ClassicProperties extends React.Component {
   contextTypes = {};
   propTypes = {};
+  getDefaultProps() {
+    getDefaultPropsWasCalled = true;
+    return {};
+  }
   getInitialState() {
     getInitialStateWasCalled = true;
     return {};
@@ -408,26 +413,32 @@ describe('ReactTypeScriptClass', function() {
   it('warns when classic properties are defined on the instance, ' +
      'but does not invoke them.', function() {
     var warn = jest.genMockFn();
-    console.warn = warn;
+    console.error = warn;
     getInitialStateWasCalled = false;
+    getDefaultPropsWasCalled = false;
     test(React.createElement(ClassicProperties), 'SPAN', 'foo');
     expect(getInitialStateWasCalled).toBe(false);
-    expect(warn.mock.calls.length).toBe(3);
+    expect(getDefaultPropsWasCalled).toBe(false);
+    expect(warn.mock.calls.length).toBe(4);
     expect(warn.mock.calls[0][0]).toContain(
       'getInitialState was defined on ClassicProperties, ' +
       'a plain JavaScript class.'
     );
     expect(warn.mock.calls[1][0]).toContain(
-      'propTypes was defined as an instance property on ClassicProperties.'
+      'getDefaultProps was defined on ClassicProperties, ' +
+      'a plain JavaScript class.'
     );
     expect(warn.mock.calls[2][0]).toContain(
+      'propTypes was defined as an instance property on ClassicProperties.'
+    );
+    expect(warn.mock.calls[3][0]).toContain(
       'contextTypes was defined as an instance property on ClassicProperties.'
     );
   });
 
   it('should warn when mispelling shouldComponentUpdate', function() {
     var warn = jest.genMockFn();
-    console.warn = warn;
+    console.error = warn;
 
     test(React.createElement(NamedComponent), 'SPAN', 'foo');
 
@@ -442,7 +453,7 @@ describe('ReactTypeScriptClass', function() {
 
   it('should throw AND warn when trying to access classic APIs', function() {
     var warn = jest.genMockFn();
-    console.warn = warn;
+    console.error = warn;
     var instance = test(
       React.createElement(Inner, {name: 'foo'}),
       'DIV','foo'

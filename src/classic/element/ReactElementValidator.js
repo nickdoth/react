@@ -90,15 +90,19 @@ function getCurrentOwnerDisplayName() {
  * @internal
  * @param {ReactElement} element Element that requires a key.
  * @param {*} parentType element's parent's type.
+ * @param {boolean} deep false if top-level collection, true if nested
  */
-function validateExplicitKey(element, parentType) {
-  if (element._store.validated || element.key != null) {
+function validateExplicitKey(element, parentType, deep) {
+  if (element.key != null) {
     return;
   }
-  element._store.validated = true;
-
   warnAndMonitorForKeyUse(
-    'Each child in an array or iterator should have a unique "key" prop.',
+    // We vary the message for nested key warning to allow filtering them out
+    // since we didn't historically warn in this case.
+    deep ?
+      'Each child in a nested array or iterator should have ' +
+      'a unique "key" prop.' :
+      'Each child in an array or iterator should have a unique "key" prop.',
     element,
     parentType
   );
@@ -112,13 +116,17 @@ function validateExplicitKey(element, parentType) {
  * @param {string} name Property name of the key.
  * @param {ReactElement} element Component that requires a key.
  * @param {*} parentType element's parent's type.
+ * @param {boolean} deep false if top-level collection, true if nested
  */
-function validatePropertyKey(name, element, parentType) {
+function validatePropertyKey(name, element, parentType, deep) {
   if (!NUMERIC_PROPERTY_REGEX.test(name)) {
     return;
   }
   warnAndMonitorForKeyUse(
-    'Child objects should have non-numeric keys so ordering is preserved.',
+    deep ?
+      'Nested child objects should have non-numeric keys ' +
+      'so ordering is preserved.' :
+      'Child objects should have non-numeric keys so ordering is preserved.',
     element,
     parentType
   );
@@ -166,7 +174,7 @@ function warnAndMonitorForKeyUse(message, element, parentType) {
 
   warning(
     false,
-    message + '%s%s See http://fb.me/react-warning-keys for more information.',
+    message + '%s%s See https://fb.me/react-warning-keys for more information.',
     parentOrOwnerAddendum,
     childOwnerAddendum
   );
@@ -180,18 +188,29 @@ function warnAndMonitorForKeyUse(message, element, parentType) {
  * @internal
  * @param {ReactNode} node Statically passed child of any type.
  * @param {*} parentType node's parent's type.
+ * @param {boolean} deep false if top-level collection, true if nested
  */
-function validateChildKeys(node, parentType) {
+function validateChildKeys(node, parentType, deep) {
   if (Array.isArray(node)) {
+    if (node._reactChildKeysValidated) {
+      // All child elements were passed in a valid location.
+      return;
+    }
     for (var i = 0; i < node.length; i++) {
       var child = node[i];
       if (ReactElement.isValidElement(child)) {
-        validateExplicitKey(child, parentType);
+        validateExplicitKey(child, parentType, deep);
+      } else {
+        // TODO: Warn on unkeyed arrays and suggest using createFragment
+        validateChildKeys(child, parentType, true);
       }
     }
-  } else if (ReactElement.isValidElement(node)) {
+  } else if (
+      typeof node === 'string' || typeof node === 'number' ||
+      ReactElement.isValidElement(node)
+    ) {
     // This element was passed in a valid location.
-    node._store.validated = true;
+    return;
   } else if (node) {
     var iteratorFn = getIteratorFn(node);
     // Entry iterators provide implicit keys.
@@ -201,7 +220,9 @@ function validateChildKeys(node, parentType) {
         var step;
         while (!(step = iterator.next()).done) {
           if (ReactElement.isValidElement(step.value)) {
-            validateExplicitKey(step.value, parentType);
+            validateExplicitKey(step.value, parentType, deep);
+          } else {
+            validateChildKeys(step.value, parentType, true);
           }
         }
       }
@@ -209,7 +230,8 @@ function validateChildKeys(node, parentType) {
       var fragment = ReactFragment.extractIfFragment(node);
       for (var key in fragment) {
         if (fragment.hasOwnProperty(key)) {
-          validatePropertyKey(key, fragment[key], parentType);
+          validatePropertyKey(key, fragment[key], parentType, deep);
+          validateChildKeys(fragment[key], parentType, true);
         }
       }
     }
@@ -264,7 +286,7 @@ function checkPropTypes(componentName, propTypes, props, location) {
         // same error.
         loggedTypeFailures[error.message] = true;
 
-        var addendum = getDeclarationErrorAddendum(this);
+        var addendum = getDeclarationErrorAddendum();
         warning(false, 'Failed propType: %s%s', error.message, addendum);
       }
     }
@@ -302,9 +324,9 @@ function warnForPropsMutation(propName, element) {
 
   warning(
     false,
-    'Don\'t set .props.%s of the React component%s. ' +
-    'Instead, specify the correct value when ' +
-    'initially creating the element.%s',
+    'Don\'t set .props.%s of the React component%s. Instead, specify the ' +
+    'correct value when initially creating the element or use ' +
+    'React.cloneElement to make a new element with updated props.%s',
     propName,
     elementInfo,
     ownerInfo
@@ -362,7 +384,8 @@ function checkAndWarnForMutatedProps(element) {
  * @param {ReactElement} element
  */
 function validatePropTypes(element) {
-  if (element.type == null) {
+  if (!(typeof element.type === 'string' ||
+      typeof element.type === 'function')) {
     // This has already warned. Don't throw.
     return;
   }
@@ -398,11 +421,11 @@ var ReactElementValidator = {
   createElement: function(type, props, children) {
     // We warn in this case but don't throw. We expect the element creation to
     // succeed and there will likely be errors in render.
-    warning(
-      type != null,
-      'React.createElement: type should not be null or undefined. It should ' +
-        'be a string (for DOM elements) or a ReactClass (for composite ' +
-        'components).'
+    warning(typeof type === 'string' || typeof type === 'function',
+      'React.createElement: type should not be null, undefined, boolean, or ' +
+        'number. It should be a string (for DOM elements) or a ReactClass ' +
+        '(for composite components).%s',
+      getDeclarationErrorAddendum()
     );
 
     var element = ReactElement.createElement.apply(this, arguments);
@@ -414,7 +437,7 @@ var ReactElementValidator = {
     }
 
     for (var i = 2; i < arguments.length; i++) {
-      validateChildKeys(arguments[i], type);
+      validateChildKeys(arguments[i], type, false);
     }
 
     validatePropTypes(element);
@@ -462,7 +485,7 @@ var ReactElementValidator = {
   cloneElement: function(element, props, children) {
     var newElement = ReactElement.cloneElement.apply(this, arguments);
     for (var i = 2; i < arguments.length; i++) {
-      validateChildKeys(arguments[i], newElement.type);
+      validateChildKeys(arguments[i], newElement.type, false);
     }
     validatePropTypes(newElement);
     return newElement;

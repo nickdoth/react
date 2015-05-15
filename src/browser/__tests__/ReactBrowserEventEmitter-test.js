@@ -57,6 +57,7 @@ var LISTENER = mocks.getMockFunction();
 var ON_CLICK_KEY = keyOf({onClick: null});
 var ON_TOUCH_TAP_KEY = keyOf({onTouchTap: null});
 var ON_CHANGE_KEY = keyOf({onChange: null});
+var ON_MOUSE_ENTER_KEY = keyOf({onMouseEnter: null});
 
 
 /**
@@ -262,12 +263,12 @@ describe('ReactBrowserEventEmitter', function() {
       ON_CLICK_KEY,
       recordID.bind(null, getID(GRANDPARENT))
     );
-    spyOn(console, 'warn');
+    spyOn(console, 'error');
     ReactTestUtils.Simulate.click(CHILD);
     expect(idCallOrder.length).toBe(1);
     expect(idCallOrder[0]).toBe(getID(CHILD));
-    expect(console.warn.calls.length).toEqual(1);
-    expect(console.warn.calls[0].args[0]).toBe(
+    expect(console.error.calls.length).toEqual(1);
+    expect(console.error.calls[0].args[0]).toBe(
       'Warning: Returning `false` from an event handler is deprecated and ' +
       'will be ignored in a future release. Instead, manually call ' +
       'e.stopPropagation() or e.preventDefault(), as appropriate.'
@@ -318,6 +319,17 @@ describe('ReactBrowserEventEmitter', function() {
     );
     ReactTestUtils.Simulate.click(CHILD);
     expect(handleParentClick.mock.calls.length).toBe(0);
+  });
+
+  it('should have mouse enter simulated by test utils', function() {
+    ReactBrowserEventEmitter.putListener(
+      getID(CHILD),
+      ON_MOUSE_ENTER_KEY,
+      recordID.bind(null, getID(CHILD))
+    );
+    ReactTestUtils.Simulate.mouseEnter(CHILD);
+    expect(idCallOrder.length).toBe(1);
+    expect(idCallOrder[0]).toBe(getID(CHILD));
   });
 
   it('should infer onTouchTap from a touchStart/End', function() {
@@ -397,10 +409,10 @@ describe('ReactBrowserEventEmitter', function() {
     var setEventListeners = [];
     var listenCalls = EventListener.listen.argsForCall;
     var captureCalls = EventListener.capture.argsForCall;
-    for (var i = 0, l = listenCalls.length; i < l; i++) {
+    for (var i = 0; i < listenCalls.length; i++) {
       setEventListeners.push(listenCalls[i][1]);
     }
-    for (i = 0, l = captureCalls.length; i < l; i++) {
+    for (i = 0; i < captureCalls.length; i++) {
       setEventListeners.push(captureCalls[i][1]);
     }
 
@@ -409,7 +421,7 @@ describe('ReactBrowserEventEmitter', function() {
     var dependencies = module.eventTypes.change.dependencies;
     expect(setEventListeners.length).toEqual(dependencies.length);
 
-    for (i = 0, l = setEventListeners.length; i < l; i++) {
+    for (i = 0; i < setEventListeners.length; i++) {
       expect(dependencies.indexOf(setEventListeners[i])).toBeTruthy();
     }
   });

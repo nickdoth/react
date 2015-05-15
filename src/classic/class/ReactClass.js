@@ -74,7 +74,7 @@ var injectedMixins = [];
  * The class specification supports a specific protocol of methods that have
  * special meaning (e.g. `render`). See `ReactClassInterface` for
  * more the comprehensive protocol. Any other properties and methods in the
- * class specification will available on the prototype.
+ * class specification will be available on the prototype.
  *
  * @interface ReactClassInterface
  * @internal
@@ -485,13 +485,11 @@ function mixSpecIntoComponent(Constructor, spec) {
       var isReactClassMethod =
         ReactClassInterface.hasOwnProperty(name);
       var isAlreadyDefined = proto.hasOwnProperty(name);
-      var markedDontBind = property && property.__reactDontBind;
       var isFunction = typeof property === 'function';
       var shouldAutoBind =
         isFunction &&
         !isReactClassMethod &&
-        !isAlreadyDefined &&
-        !markedDontBind;
+        !isAlreadyDefined;
 
       if (shouldAutoBind) {
         if (!proto.__reactAutoBindMap) {
@@ -763,10 +761,11 @@ var ReactClassMixin = {
       }
     }
     var internalInstance = ReactInstanceMap.get(this);
-    return (
-      internalInstance &&
-      internalInstance !== ReactLifeCycle.currentlyMountingInstance
-    );
+    if (internalInstance) {
+      return internalInstance !== ReactLifeCycle.currentlyMountingInstance;
+    } else {
+      return false;
+    }
   },
 
   /**
@@ -832,7 +831,7 @@ var ReactClass = {
         warning(
           this instanceof Constructor,
           'Something is calling a React component directly. Use a factory or ' +
-          'JSX instead. See: http://fb.me/react-legacyfactory'
+          'JSX instead. See: https://fb.me/react-legacyfactory'
         );
       }
 

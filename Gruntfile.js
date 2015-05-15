@@ -18,13 +18,11 @@ module.exports = function(grunt) {
 
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),
-    copy: require('./grunt/config/copy'),
     jsx: require('./grunt/config/jsx'),
     browserify: require('./grunt/config/browserify'),
     populist: require('./grunt/config/populist')(grunt),
     connect: require('./grunt/config/server')(grunt),
     'webdriver-jasmine': require('./grunt/config/webdriver-jasmine'),
-    'webdriver-perf': require('./grunt/config/webdriver-perf'),
     npm: require('./grunt/config/npm'),
     clean: [
       './build',
@@ -70,7 +68,7 @@ module.exports = function(grunt) {
   // Register jsx:normal and :release tasks.
   grunt.registerMultiTask('jsx', jsxTask);
 
-  // Our own browserify-based tasks to build a single JS file build
+  // Our own browserify-based tasks to build a single JS file build.
   grunt.registerMultiTask('browserify', browserifyTask);
 
   grunt.registerMultiTask('populist', populistTask);
@@ -78,8 +76,6 @@ module.exports = function(grunt) {
   grunt.registerTask('sauce-tunnel', sauceTunnelTask);
 
   grunt.registerMultiTask('webdriver-jasmine', webdriverJasmineTasks);
-
-  grunt.registerMultiTask('webdriver-perf', require('./grunt/tasks/webdriver-perf'));
 
   grunt.registerMultiTask('npm', npmTask);
 
@@ -119,14 +115,6 @@ module.exports = function(grunt) {
     'version-check',
     'browserify:withCodeCoverageLogging'
   ]);
-  grunt.registerTask('build:perf', [
-    'jsx:normal',
-    'version-check',
-    'browserify:transformer',
-    'browserify:basic',
-    'browserify:min',
-    'download-previous-version'
-  ]);
   grunt.registerTask('build:test', [
     'delete-build-modules',
     'jsx:test',
@@ -153,12 +141,6 @@ module.exports = function(grunt) {
     'webdriver-jasmine:local'
   ]);
 
-  grunt.registerTask('perf:webdriver:phantomjs', [
-    'connect',
-    'webdriver-phantomjs',
-    'webdriver-perf:local'
-  ]);
-
   grunt.registerTask('test:full', [
     'build:test',
     'build:basic',
@@ -171,20 +153,6 @@ module.exports = function(grunt) {
     'webdriver-jasmine:saucelabs_android',
     'webdriver-jasmine:saucelabs_firefox',
     'webdriver-jasmine:saucelabs_chrome'
-  ]);
-
-  grunt.registerTask('perf:full', [
-    'build:perf',
-
-    'connect',
-    'webdriver-phantomjs',
-    'webdriver-perf:local',
-
-    'sauce-tunnel',
-    'webdriver-perf:saucelabs_firefox',
-    'webdriver-perf:saucelabs_chrome',
-    'webdriver-perf:saucelabs_ie11',
-    'webdriver-perf:saucelabs_ie8'
   ]);
 
   grunt.registerTask('test:webdriver:saucelabs', [
@@ -232,7 +200,6 @@ module.exports = function(grunt) {
   ]);
 
   grunt.registerTask('test:coverage', [
-    'build:test',
     'build:withCodeCoverageLogging',
     'test:webdriver:phantomjs',
     'coverage:parse'
@@ -251,7 +218,6 @@ module.exports = function(grunt) {
       grunt.task.run('build:test', 'build:basic', 'test:webdriver:phantomjs');
     }
   });
-  grunt.registerTask('perf', ['build:perf', 'perf:webdriver:phantomjs']);
   grunt.registerTask('npm:test', ['build', 'npm:pack']);
 
   // Optimized build task that does all of our builds. The subtasks will be run
@@ -269,7 +235,6 @@ module.exports = function(grunt) {
     'npm-react:pack',
     'npm-react-tools:release',
     'npm-react-tools:pack',
-    'copy:react_docs',
     'compare_size'
   ]);
 
@@ -293,6 +258,6 @@ module.exports = function(grunt) {
     'release:msg'
   ]);
 
-  // The default task - build - to keep setup easy
+  // The default task - build - to keep setup easy.
   grunt.registerTask('default', ['build']);
 };

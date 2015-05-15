@@ -42,7 +42,7 @@ React.render(
   <FancyCheckbox checked={true} onClick={console.log.bind(console)}>
     Hello world!
   </FancyCheckbox>,
-  document.body
+  document.getElementById('example')
 );
 ```
 
@@ -76,7 +76,7 @@ React.render(
   <FancyCheckbox checked={true} onClick={console.log.bind(console)}>
     Hello world!
   </FancyCheckbox>,
-  document.body
+  document.getElementById('example')
 );
 ```
 
@@ -143,7 +143,7 @@ z; // { a: 3, b: 4 }
 
 > 注意:
 >
-> 使用 [JSX 命令行工具](http://npmjs.org/package/react-tools) 配合 `--harmony` 标记来启用 ES7 语法。
+> 使用 [JSX 命令行工具](https://www.npmjs.com/package/react-tools) 配合 `--harmony` 标记来启用 ES7 语法。
 
 
 ## 使用 Underscore 来传递

@@ -29,6 +29,8 @@ var escapeTextContentForBrowser = require('escapeTextContentForBrowser');
 var invariant = require('invariant');
 var isEventSupported = require('isEventSupported');
 var keyOf = require('keyOf');
+var shallowEqual = require('shallowEqual');
+var validateDOMNesting = require('validateDOMNesting');
 var warning = require('warning');
 
 var deleteListener = ReactBrowserEventEmitter.deleteListener;
@@ -41,6 +43,44 @@ var CONTENT_TYPES = {'string': true, 'number': true};
 var STYLE = keyOf({style: null});
 
 var ELEMENT_NODE_TYPE = 1;
+
+var styleMutationWarning = {};
+
+function checkAndWarnForMutatedStyle(style1, style2, component) {
+  if (style1 == null || style2 == null) {
+    return;
+  }
+  if (shallowEqual(style1, style2)) {
+    return;
+  }
+
+  var componentName = component._tag;
+  var owner = component._currentElement._owner;
+  var ownerName;
+  if (owner) {
+    ownerName = owner.getName();
+  }
+
+  var hash = ownerName + '|' + componentName;
+
+  if (styleMutationWarning.hasOwnProperty(hash)) {
+    return;
+  }
+
+  styleMutationWarning[hash] = true;
+
+  warning(
+    false,
+    '`%s` was passed a style object that has previously been mutated. ' +
+    'Mutating `style` is deprecated. Consider cloning it beforehand. Check ' +
+    'the `render` %s. Previous style: %s. Mutated style: %s.',
+    componentName,
+    owner ? 'of `' + ownerName + '`' : 'using <' + componentName + '>',
+    JSON.stringify(style1),
+    JSON.stringify(style2)
+  );
+}
+
 
 /**
  * Optionally injectable operations for mutating the DOM
@@ -71,9 +111,10 @@ function assertValidProps(component, props) {
       'Can only set one of `children` or `props.dangerouslySetInnerHTML`.'
     );
     invariant(
-      props.dangerouslySetInnerHTML.__html != null,
+      typeof props.dangerouslySetInnerHTML === 'object' &&
+      '__html' in props.dangerouslySetInnerHTML,
       '`props.dangerouslySetInnerHTML` must be in the form `{__html: ...}`. ' +
-      'Please visit http://fb.me/react-invariant-dangerously-set-inner-html ' +
+      'Please visit https://fb.me/react-invariant-dangerously-set-inner-html ' +
       'for more information.'
     );
   }
@@ -99,7 +140,7 @@ function assertValidProps(component, props) {
   );
 }
 
-function putListener(id, registrationName, listener, transaction) {
+function enqueuePutListener(id, registrationName, listener, transaction) {
   if (__DEV__) {
     // IE8 has no API for event capturing and the `onScroll` event doesn't
     // bubble.
@@ -115,10 +156,19 @@ function putListener(id, registrationName, listener, transaction) {
       container;
     listenTo(registrationName, doc);
   }
-  transaction.getPutListenerQueue().enqueuePutListener(
-    id,
-    registrationName,
-    listener
+  transaction.getReactMountReady().enqueue(putListener, {
+    id: id,
+    registrationName: registrationName,
+    listener: listener
+  });
+}
+
+function putListener() {
+  var listenerToPut = this;
+  ReactBrowserEventEmitter.putListener(
+    listenerToPut.id,
+    listenerToPut.registrationName,
+    listenerToPut.listener
   );
 }
 
@@ -144,6 +194,12 @@ var omittedCloseTags = {
   // NOTE: menuitem's close tag should be omitted, but that causes problems.
 };
 
+var newlineEatingTags = {
+  'listing': true,
+  'pre': true,
+  'textarea': true
+};
+
 // For HTML, certain tags cannot have children. This has the same purpose as
 // `omittedCloseTags` except that `menuitem` should still have its closing tag.
 
@@ -151,7 +207,7 @@ var voidElementTags = assign({
   'menuitem': true
 }, omittedCloseTags);
 
-// We accept any tag to be rendered but since this gets injected into abitrary
+// We accept any tag to be rendered but since this gets injected into arbitrary
 // HTML, we want to make sure that it's a safe tag.
 // http://www.w3.org/TR/REC-xml/#NT-Name
 
@@ -164,6 +220,17 @@ function validateDangerousTag(tag) {
     invariant(VALID_TAG_REGEX.test(tag), 'Invalid tag: %s', tag);
     validatedTagCache[tag] = true;
   }
+}
+
+function processChildContext(context, inst) {
+  if (__DEV__) {
+    // Pass down our tag name to child components for validation purposes
+    context = assign({}, context);
+    var info = context[validateDOMNesting.ancestorInfoContextKey];
+    context[validateDOMNesting.ancestorInfoContextKey] =
+      validateDOMNesting.updatedAncestorInfo(info, inst._tag, inst);
+  }
+  return context;
 }
 
 /**
@@ -184,6 +251,7 @@ function ReactDOMComponent(tag) {
   validateDangerousTag(tag);
   this._tag = tag;
   this._renderedChildren = null;
+  this._previousStyle = null;
   this._previousStyleCopy = null;
   this._rootNodeID = null;
 }
@@ -203,17 +271,29 @@ ReactDOMComponent.Mixin = {
    * @internal
    * @param {string} rootID The root DOM ID for this node.
    * @param {ReactReconcileTransaction|ReactServerRenderingTransaction} transaction
+   * @param {object} context
    * @return {string} The computed markup.
    */
   mountComponent: function(rootID, transaction, context) {
     this._rootNodeID = rootID;
+
     assertValidProps(this, this._currentElement.props);
-    var closeTag = omittedCloseTags[this._tag] ? '' : '</' + this._tag + '>';
-    return (
-      this._createOpenTagMarkupAndPutListeners(transaction) +
-      this._createContentMarkup(transaction, context) +
-      closeTag
-    );
+    if (__DEV__) {
+      if (context[validateDOMNesting.ancestorInfoContextKey]) {
+        validateDOMNesting(
+          this._tag,
+          this,
+          context[validateDOMNesting.ancestorInfoContextKey]
+        );
+      }
+    }
+
+    var tagOpen = this._createOpenTagMarkupAndPutListeners(transaction);
+    var tagContent = this._createContentMarkup(transaction, context);
+    if (!tagContent && omittedCloseTags[this._tag]) {
+      return tagOpen + '/>';
+    }
+    return tagOpen + '>' + tagContent + '</' + this._tag + '>';
   },
 
   /**
@@ -241,10 +321,14 @@ ReactDOMComponent.Mixin = {
         continue;
       }
       if (registrationNameModules.hasOwnProperty(propKey)) {
-        putListener(this._rootNodeID, propKey, propValue, transaction);
+        enqueuePutListener(this._rootNodeID, propKey, propValue, transaction);
       } else {
         if (propKey === STYLE) {
           if (propValue) {
+            if (__DEV__) {
+              // See `_updateDOMProperties`. style block
+              this._previousStyle = propValue;
+            }
             propValue = this._previousStyleCopy = assign({}, props.style);
           }
           propValue = CSSPropertyOperations.createMarkupForStyles(propValue);
@@ -260,11 +344,11 @@ ReactDOMComponent.Mixin = {
     // For static pages, no need to put React ID and checksum. Saves lots of
     // bytes.
     if (transaction.renderToStaticMarkup) {
-      return ret + '>';
+      return ret;
     }
 
     var markupForID = DOMPropertyOperations.createMarkupForID(this._rootNodeID);
-    return ret + ' ' + markupForID + '>';
+    return ret + ' ' + markupForID;
   },
 
   /**
@@ -276,42 +360,56 @@ ReactDOMComponent.Mixin = {
    * @return {string} Content markup.
    */
   _createContentMarkup: function(transaction, context) {
-    var prefix = '';
-    if (this._tag === 'listing' ||
-        this._tag === 'pre' ||
-        this._tag === 'textarea') {
-      // Add an initial newline because browsers ignore the first newline in
-      // a <listing>, <pre>, or <textarea> as an "authoring convenience" -- see
-      // https://html.spec.whatwg.org/multipage/syntax.html#parsing-main-inbody.
-      prefix = '\n';
-    }
-
+    var ret = '';
     var props = this._currentElement.props;
 
     // Intentional use of != to avoid catching zero/false.
     var innerHTML = props.dangerouslySetInnerHTML;
     if (innerHTML != null) {
       if (innerHTML.__html != null) {
-        return prefix + innerHTML.__html;
+        ret = innerHTML.__html;
       }
     } else {
       var contentToUse =
         CONTENT_TYPES[typeof props.children] ? props.children : null;
       var childrenToUse = contentToUse != null ? null : props.children;
       if (contentToUse != null) {
-        return prefix + escapeTextContentForBrowser(contentToUse);
+        // TODO: Validate that text is allowed as a child of this node
+        ret = escapeTextContentForBrowser(contentToUse);
       } else if (childrenToUse != null) {
         var mountImages = this.mountChildren(
           childrenToUse,
           transaction,
-          context
+          processChildContext(context, this)
         );
-        return prefix + mountImages.join('');
+        ret = mountImages.join('');
       }
     }
-    return prefix;
+    if (newlineEatingTags[this._tag] && ret.charAt(0) === '\n') {
+      // text/html ignores the first character in these tags if it's a newline
+      // Prefer to break application/xml over text/html (for now) by adding
+      // a newline specifically to get eaten by the parser. (Alternately for
+      // textareas, replacing "^\n" with "\r\n" doesn't get eaten, and the first
+      // \r is normalized out by HTMLTextAreaElement#value.)
+      // See: <http://www.w3.org/TR/html-polyglot/#newlines-in-textarea-and-pre>
+      // See: <http://www.w3.org/TR/html5/syntax.html#element-restrictions>
+      // See: <http://www.w3.org/TR/html5/syntax.html#newlines>
+      // See: Parsing of "textarea" "listing" and "pre" elements
+      //  from <http://www.w3.org/TR/html5/syntax.html#parsing-main-inbody>
+      return '\n' + ret;
+    } else {
+      return ret;
+    }
   },
 
+  /**
+   * Receives a next element and updates the component.
+   *
+   * @internal
+   * @param {ReactElement} nextElement
+   * @param {ReactReconcileTransaction|ReactServerRenderingTransaction} transaction
+   * @param {object} context
+   */
   receiveComponent: function(nextElement, transaction, context) {
     var prevElement = this._currentElement;
     this._currentElement = nextElement;
@@ -331,7 +429,11 @@ ReactDOMComponent.Mixin = {
   updateComponent: function(transaction, prevElement, nextElement, context) {
     assertValidProps(this, this._currentElement.props);
     this._updateDOMProperties(prevElement.props, transaction);
-    this._updateDOMChildren(prevElement.props, transaction, context);
+    this._updateDOMChildren(
+      prevElement.props,
+      transaction,
+      processChildContext(context, this)
+    );
   },
 
   /**
@@ -394,7 +496,17 @@ ReactDOMComponent.Mixin = {
       }
       if (propKey === STYLE) {
         if (nextProp) {
+          if (__DEV__) {
+            checkAndWarnForMutatedStyle(
+              this._previousStyleCopy,
+              this._previousStyle,
+              this
+            );
+            this._previousStyle = nextProp;
+          }
           nextProp = this._previousStyleCopy = assign({}, nextProp);
+        } else {
+          this._previousStyleCopy = null;
         }
         if (lastProp) {
           // Unset styles on `lastProp` but not on `nextProp`.
@@ -419,7 +531,7 @@ ReactDOMComponent.Mixin = {
         }
       } else if (registrationNameModules.hasOwnProperty(propKey)) {
         if (nextProp) {
-          putListener(this._rootNodeID, propKey, nextProp, transaction);
+          enqueuePutListener(this._rootNodeID, propKey, nextProp, transaction);
         } else if (lastProp) {
           deleteListener(this._rootNodeID, propKey);
         }

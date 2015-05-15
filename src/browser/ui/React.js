@@ -13,11 +13,9 @@
 
 'use strict';
 
-var EventPluginUtils = require('EventPluginUtils');
 var ReactChildren = require('ReactChildren');
 var ReactComponent = require('ReactComponent');
 var ReactClass = require('ReactClass');
-var ReactContext = require('ReactContext');
 var ReactCurrentOwner = require('ReactCurrentOwner');
 var ReactElement = require('ReactElement');
 var ReactElementValidator = require('ReactElementValidator');
@@ -60,9 +58,6 @@ var React = {
   Component: ReactComponent,
   DOM: ReactDOM,
   PropTypes: ReactPropTypes,
-  initializeTouchEvents: function(shouldUseTouch) {
-    EventPluginUtils.useTouchEvents = shouldUseTouch;
-  },
   createClass: ReactClass.createClass,
   createElement: createElement,
   cloneElement: cloneElement,
@@ -79,7 +74,6 @@ var React = {
   renderToStaticMarkup: ReactServerRendering.renderToStaticMarkup,
   unmountComponentAtNode: ReactMount.unmountComponentAtNode,
   isValidElement: ReactElement.isValidElement,
-  withContext: ReactContext.withContext,
 
   // Hook for JSX spread, don't use this for anything else.
   __spread: assign
@@ -109,14 +103,15 @@ if (__DEV__) {
       if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === 'undefined') {
         console.debug(
           'Download the React DevTools for a better development experience: ' +
-          'http://fb.me/react-devtools'
+          'https://fb.me/react-devtools'
         );
       }
     }
 
     // If we're in IE8, check to see if we are in combatibility mode and provide
     // information on preventing compatibility mode
-    var ieCompatibilityMode = document.documentMode && document.documentMode < 8;
+    var ieCompatibilityMode =
+      document.documentMode && document.documentMode < 8;
 
     warning(
       !ieCompatibilityMode,
@@ -147,7 +142,7 @@ if (__DEV__) {
       if (!expectedFeatures[i]) {
         console.error(
           'One or more ES5 shim/shams expected by React are not available: ' +
-          'http://fb.me/react-warning-polyfills'
+          'https://fb.me/react-warning-polyfills'
         );
         break;
       }
@@ -155,6 +150,6 @@ if (__DEV__) {
   }
 }
 
-React.version = '0.14.0-alpha';
+React.version = '0.14.0-alpha1';
 
 module.exports = React;

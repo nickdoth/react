@@ -55,40 +55,45 @@ describe('DOMPropertyOperations', function() {
     });
 
     it('should warn about incorrect casing', function() {
-      spyOn(console, 'warn');
+      spyOn(console, 'error');
       expect(DOMPropertyOperations.createMarkupForProperty(
         'tabindex',
         '1'
       )).toBe(null);
-      expect(console.warn.argsForCall.length).toBe(1);
-      expect(console.warn.argsForCall[0][0]).toContain('tabIndex');
+      expect(console.error.argsForCall.length).toBe(1);
+      expect(console.error.argsForCall[0][0]).toContain('tabIndex');
     });
 
     it('should warn about class', function() {
-      spyOn(console, 'warn');
+      spyOn(console, 'error');
       expect(DOMPropertyOperations.createMarkupForProperty(
         'class',
         'muffins'
       )).toBe(null);
-      expect(console.warn.argsForCall.length).toBe(1);
-      expect(console.warn.argsForCall[0][0]).toContain('className');
+      expect(console.error.argsForCall.length).toBe(1);
+      expect(console.error.argsForCall[0][0]).toContain('className');
     });
 
     it('should create markup for boolean properties', function() {
       expect(DOMPropertyOperations.createMarkupForProperty(
         'checked',
         'simple'
-      )).toBe('checked');
+      )).toBe('checked=""');
 
       expect(DOMPropertyOperations.createMarkupForProperty(
         'checked',
         true
-      )).toBe('checked');
+      )).toBe('checked=""');
 
       expect(DOMPropertyOperations.createMarkupForProperty(
         'checked',
         false
       )).toBe('');
+
+      expect(DOMPropertyOperations.createMarkupForProperty(
+        'scoped',
+        true
+      )).toBe('scoped=""');
     });
 
     it('should create markup for booleanish properties', function() {
@@ -100,7 +105,7 @@ describe('DOMPropertyOperations', function() {
       expect(DOMPropertyOperations.createMarkupForProperty(
         'download',
         true
-      )).toBe('download');
+      )).toBe('download=""');
 
       expect(DOMPropertyOperations.createMarkupForProperty(
         'download',
@@ -190,6 +195,18 @@ describe('DOMPropertyOperations', function() {
       DOMPropertyOperations.setValueForProperty(stubNode, 'role', '#');
       expect(stubNode.getAttribute('role')).toBe('#');
       expect(stubNode.role).toBeUndefined();
+    });
+
+    it('should set values as namespace attributes if necessary', function() {
+      spyOn(stubNode, 'setAttributeNS');
+      DOMPropertyOperations.setValueForProperty(
+        stubNode,
+        'xlinkHref',
+        'about:blank'
+      );
+      expect(stubNode.setAttributeNS.argsForCall.length).toBe(1);
+      expect(stubNode.setAttributeNS.argsForCall[0])
+        .toEqual(['http://www.w3.org/1999/xlink', 'xlink:href', 'about:blank']);
     });
 
     it('should convert attribute values to string first', function() {

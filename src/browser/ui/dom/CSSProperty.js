@@ -20,19 +20,23 @@ var isUnitlessNumber = {
   columnCount: true,
   flex: true,
   flexGrow: true,
+  flexPositive: true,
   flexShrink: true,
+  flexNegative: true,
   fontWeight: true,
   lineClamp: true,
   lineHeight: true,
   opacity: true,
   order: true,
   orphans: true,
+  tabSize: true,
   widows: true,
   zIndex: true,
   zoom: true,
 
   // SVG-related properties
   fillOpacity: true,
+  strokeDashoffset: true,
   strokeOpacity: true,
   strokeWidth: true
 };

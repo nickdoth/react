@@ -9,8 +9,6 @@
  * @emails react-core
  */
 
-/*jslint evil: true */
-
 'use strict';
 
 var assign = require('Object.assign');
@@ -60,7 +58,11 @@ describe('ReactDOMComponent', function() {
       expect(stubStyle.fontFamily).toEqual('');
     });
 
+    // TODO: (poshannessy) deprecate this pattern.
     it("should update styles when mutating style object", function() {
+      // not actually used. Just to suppress the style mutation warning
+      spyOn(console, 'error');
+
       var styles = {display: 'none', fontFamily: 'Arial', lineHeight: 1.2};
       var container = document.createElement('div');
       React.render(<div style={styles} />, container);
@@ -96,6 +98,46 @@ describe('ReactDOMComponent', function() {
       expect(stubStyle.lineHeight).toBe('');
     });
 
+    it('should warn when mutating style', function() {
+      spyOn(console, 'error');
+
+      var style = {border: '1px solid black'};
+      var App = React.createClass({
+        getInitialState: function() {
+          return {style: style};
+        },
+        render: function() {
+          return <div style={this.state.style}>asd</div>;
+        }
+      });
+
+      var stub = ReactTestUtils.renderIntoDocument(<App />);
+      style.position = 'absolute';
+      stub.setState({style: style});
+      expect(console.error.argsForCall.length).toBe(1);
+      expect(console.error.argsForCall[0][0]).toEqual(
+        'Warning: `div` was passed a style object that has previously been ' +
+        'mutated. Mutating `style` is deprecated. Consider cloning it ' +
+        'beforehand. Check the `render` of `App`. Previous style: ' +
+        '{"border":"1px solid black"}. Mutated style: ' +
+        '{"border":"1px solid black","position":"absolute"}.'
+      );
+
+      style = {background: 'red'};
+      stub = ReactTestUtils.renderIntoDocument(<App />);
+      style.background = 'green';
+      stub.setState({style: {background: 'green'}});
+      // already warned once for the same component and owner
+      expect(console.error.argsForCall.length).toBe(1);
+
+      style = {background: 'red'};
+      var div = document.createElement('div');
+      React.render(<span style={style}></span>, div);
+      style.background = 'blue';
+      React.render(<span style={style}></span>, div);
+      expect(console.error.argsForCall.length).toBe(2);
+    });
+
     it("should update styles if initially null", function() {
       var styles = null;
       var container = document.createElement('div');
@@ -107,6 +149,27 @@ describe('ReactDOMComponent', function() {
 
       React.render(<div style={styles} />, container);
       expect(stubStyle.display).toEqual('block');
+    });
+
+    it("should update styles if updated to null multiple times", function() {
+      var styles = null;
+      var container = document.createElement('div');
+      React.render(<div style={styles} />, container);
+
+      styles = {display: 'block'};
+      var stubStyle = container.firstChild.style;
+
+      React.render(<div style={styles} />, container);
+      expect(stubStyle.display).toEqual('block');
+
+      React.render(<div style={null} />, container);
+      expect(stubStyle.display).toEqual('');
+
+      React.render(<div style={styles} />, container);
+      expect(stubStyle.display).toEqual('block');
+
+      React.render(<div style={null} />, container);
+      expect(stubStyle.display).toEqual('');
     });
 
     it("should remove attributes", function() {
@@ -344,18 +407,18 @@ describe('ReactDOMComponent', function() {
     });
 
     it("should warn against children for void elements", function() {
-      spyOn(console, 'warn');
+      spyOn(console, 'error');
 
       var container = document.createElement('div');
 
       React.render(<input>children</input>, container);
 
-      expect(console.warn.argsForCall.length).toBe(1);
-      expect(console.warn.argsForCall[0][0]).toContain('void element');
+      expect(console.error.argsForCall.length).toBe(1);
+      expect(console.error.argsForCall[0][0]).toContain('void element');
     });
 
     it("should warn against dangerouslySetInnerHTML for void elements", function() {
-      spyOn(console, 'warn');
+      spyOn(console, 'error');
 
       var container = document.createElement('div');
 
@@ -364,23 +427,23 @@ describe('ReactDOMComponent', function() {
         container
       );
 
-      expect(console.warn.argsForCall.length).toBe(1);
-      expect(console.warn.argsForCall[0][0]).toContain('void element');
+      expect(console.error.argsForCall.length).toBe(1);
+      expect(console.error.argsForCall[0][0]).toContain('void element');
     });
 
     it("should treat menuitem as a void element but still create the closing tag", function() {
-      spyOn(console, 'warn');
+      spyOn(console, 'error');
 
       var container = document.createElement('div');
 
-      React.render(<menuitem />, container);
+      var returnedValue = React.renderToString(<menu><menuitem /></menu>);
 
-      expect(container.innerHTML).toContain('</menuitem>');
+      expect(returnedValue).toContain('</menuitem>');
 
-      React.render(<menuitem>children</menuitem>, container);
+      React.render(<menu><menuitem>children</menuitem></menu>, container);
 
-      expect(console.warn.argsForCall.length).toBe(1);
-      expect(console.warn.argsForCall[0][0]).toContain('void element');
+      expect(console.error.argsForCall.length).toBe(1);
+      expect(console.error.argsForCall[0][0]).toContain('void element');
     });
 
     it("should validate against multiple children props", function() {
@@ -394,10 +457,10 @@ describe('ReactDOMComponent', function() {
 
     it('should validate against use of innerHTML', function() {
 
-      spyOn(console, 'warn');
+      spyOn(console, 'error');
       mountComponent({innerHTML: '<span>Hi Jim!</span>'});
-      expect(console.warn.argsForCall.length).toBe(1);
-      expect(console.warn.argsForCall[0][0]).toContain(
+      expect(console.error.argsForCall.length).toBe(1);
+      expect(console.error.argsForCall[0][0]).toContain(
         'Directly setting property `innerHTML` is not permitted. '
       );
     });
@@ -408,7 +471,7 @@ describe('ReactDOMComponent', function() {
       }).toThrow(
         'Invariant Violation: ' +
         '`props.dangerouslySetInnerHTML` must be in the form `{__html: ...}`. ' +
-        'Please visit http://fb.me/react-invariant-dangerously-set-inner-html for more information.'
+        'Please visit https://fb.me/react-invariant-dangerously-set-inner-html for more information.'
       );
     });
 
@@ -418,15 +481,21 @@ describe('ReactDOMComponent', function() {
       }).toThrow(
         'Invariant Violation: ' +
         '`props.dangerouslySetInnerHTML` must be in the form `{__html: ...}`. ' +
-        'Please visit http://fb.me/react-invariant-dangerously-set-inner-html for more information.'
+        'Please visit https://fb.me/react-invariant-dangerously-set-inner-html for more information.'
       );
     });
 
+    it('should allow {__html: null}', function() {
+      expect(function() {
+        mountComponent({dangerouslySetInnerHTML: {__html: null} });
+      }).not.toThrow();
+    });
+
     it("should warn about contentEditable and children", function() {
-      spyOn(console, 'warn');
+      spyOn(console, 'error');
       mountComponent({contentEditable: true, children: ''});
-      expect(console.warn.argsForCall.length).toBe(1);
-      expect(console.warn.argsForCall[0][0]).toContain('contentEditable');
+      expect(console.error.argsForCall.length).toBe(1);
+      expect(console.error.argsForCall[0][0]).toContain('contentEditable');
     });
 
     it("should validate against invalid styles", function() {
@@ -503,17 +572,17 @@ describe('ReactDOMComponent', function() {
     });
 
     it("should warn against children for void elements", function() {
-      spyOn(console, 'warn');
+      spyOn(console, 'error');
 
       React.render(<input />, container);
       React.render(<input>children</input>, container);
 
-      expect(console.warn.argsForCall.length).toBe(1);
-      expect(console.warn.argsForCall[0][0]).toContain('void element');
+      expect(console.error.argsForCall.length).toBe(1);
+      expect(console.error.argsForCall[0][0]).toContain('void element');
     });
 
     it("should warn against dangerouslySetInnerHTML for void elements", function() {
-      spyOn(console, 'warn');
+      spyOn(console, 'error');
 
       React.render(<input />, container);
       React.render(
@@ -521,8 +590,8 @@ describe('ReactDOMComponent', function() {
         container
       );
 
-      expect(console.warn.argsForCall.length).toBe(1);
-      expect(console.warn.argsForCall[0][0]).toContain('void element');
+      expect(console.error.argsForCall.length).toBe(1);
+      expect(console.error.argsForCall[0][0]).toContain('void element');
     });
 
     it("should validate against multiple children props", function() {
@@ -540,13 +609,13 @@ describe('ReactDOMComponent', function() {
     });
 
     it("should warn about contentEditable and children", function() {
-      spyOn(console, 'warn');
+      spyOn(console, 'error');
       React.render(
         <div contentEditable><div /></div>,
         container
       );
-      expect(console.warn.argsForCall.length).toBe(1);
-      expect(console.warn.argsForCall[0][0]).toContain('contentEditable');
+      expect(console.error.argsForCall.length).toBe(1);
+      expect(console.error.argsForCall[0][0]).toContain('contentEditable');
     });
 
     it("should validate against invalid styles", function() {
@@ -586,7 +655,7 @@ describe('ReactDOMComponent', function() {
       var ReactMount = require('ReactMount');
 
       var container = document.createElement('div');
-      document.documentElement.appendChild(container);
+      document.body.appendChild(container);
 
       var callback = function() {};
       var instance = <div onClick={callback} />;
@@ -597,7 +666,7 @@ describe('ReactDOMComponent', function() {
       expect(
         ReactBrowserEventEmitter.getListener(rootNodeID, 'onClick')
       ).toBe(callback);
-      expect(rootNode).toBe(instance.getDOMNode());
+      expect(rootNode).toBe(React.findDOMNode(instance));
 
       React.unmountComponentAtNode(container);
 
@@ -620,10 +689,10 @@ describe('ReactDOMComponent', function() {
       var React = require('React');
       var ReactTestUtils = require('ReactTestUtils');
 
-      spyOn(console, 'warn');
+      spyOn(console, 'error');
       ReactTestUtils.renderIntoDocument(<div onScroll={function() {}} />);
-      expect(console.warn.calls.length).toBe(1);
-      expect(console.warn.mostRecentCall.args[0]).toBe(
+      expect(console.error.calls.length).toBe(1);
+      expect(console.error.mostRecentCall.args[0]).toBe(
         'Warning: This browser doesn\'t support the `onScroll` event'
       );
     });
@@ -651,6 +720,128 @@ describe('ReactDOMComponent', function() {
         'Invariant Violation: Invalid tag: div><img /><div'
       );
     });
-
   });
+
+  describe('nesting validation', function() {
+    var React;
+    var ReactTestUtils;
+
+    beforeEach(function() {
+      React = require('React');
+      ReactTestUtils = require('ReactTestUtils');
+    });
+
+    it('warns on invalid nesting', () => {
+      spyOn(console, 'error');
+      ReactTestUtils.renderIntoDocument(<div><tr /></div>);
+
+      expect(console.error.calls.length).toBe(1);
+      expect(console.error.calls[0].args[0]).toBe(
+        'Warning: validateDOMNesting(...): <tr> cannot appear as a child of ' +
+        '<div>. See div > tr.'
+      );
+    });
+
+    it('warns on invalid nesting at root', () => {
+      spyOn(console, 'error');
+      var p = document.createElement('p');
+      React.render(<tr />, p);
+
+      expect(console.error.calls.length).toBe(1);
+      expect(console.error.calls[0].args[0]).toBe(
+        'Warning: validateDOMNesting(...): <tr> cannot appear as a child of ' +
+        '<p>. See p > tr.'
+      );
+    });
+
+    it('warns nicely for table rows', () => {
+      spyOn(console, 'error');
+      var Row = React.createClass({
+        render: function() {
+          return <tr />;
+        }
+      });
+      var Foo = React.createClass({
+        render: function() {
+          return <table><Row /></table>;
+        }
+      });
+      ReactTestUtils.renderIntoDocument(<Foo />);
+
+      expect(console.error.calls.length).toBe(1);
+      expect(console.error.calls[0].args[0]).toBe(
+        'Warning: validateDOMNesting(...): <tr> cannot appear as a child of ' +
+        '<table>. See Foo > table > Row > tr. Add a <tbody> to your code to ' +
+        'match the DOM tree generated by the browser.'
+      );
+    });
+
+    it('gives useful context in warnings', () => {
+      spyOn(console, 'error');
+      var Row = React.createClass({
+        render: () => <tr />
+      });
+      var FancyRow = React.createClass({
+        render: () => <Row />
+      });
+      var Table = React.createClass({
+        render: function() { return <table>{this.props.children}</table>; }
+      });
+      var FancyTable = React.createClass({
+        render: function() { return <Table>{this.props.children}</Table>; }
+      });
+
+      var Viz1 = React.createClass({
+        render: () => <table><FancyRow /></table>
+      });
+      var App1 = React.createClass({
+        render: () => <Viz1 />
+      });
+      ReactTestUtils.renderIntoDocument(<App1 />);
+      expect(console.error.calls.length).toBe(1);
+      expect(console.error.calls[0].args[0]).toContain(
+        'See Viz1 > table > FancyRow > Row > tr.'
+      );
+
+      var Viz2 = React.createClass({
+        render: () => <FancyTable><FancyRow /></FancyTable>
+      });
+      var App2 = React.createClass({
+        render: () => <Viz2 />
+      });
+      ReactTestUtils.renderIntoDocument(<App2 />);
+      expect(console.error.calls.length).toBe(2);
+      expect(console.error.calls[1].args[0]).toContain(
+        'See Viz2 > FancyTable > Table > table > FancyRow > Row > tr.'
+      );
+
+      ReactTestUtils.renderIntoDocument(<FancyTable><FancyRow /></FancyTable>);
+      expect(console.error.calls.length).toBe(3);
+      expect(console.error.calls[2].args[0]).toContain(
+        'See FancyTable > Table > table > FancyRow > Row > tr.'
+      );
+
+      ReactTestUtils.renderIntoDocument(<table><FancyRow /></table>);
+      expect(console.error.calls.length).toBe(4);
+      expect(console.error.calls[3].args[0]).toContain(
+        'See table > FancyRow > Row > tr.'
+      );
+
+      ReactTestUtils.renderIntoDocument(<FancyTable><tr /></FancyTable>);
+      expect(console.error.calls.length).toBe(5);
+      expect(console.error.calls[4].args[0]).toContain(
+        'See FancyTable > Table > table > tr.'
+      );
+
+      var Link = React.createClass({
+        render: function() { return <a>{this.props.children}</a>; }
+      });
+      ReactTestUtils.renderIntoDocument(<Link><div><Link /></div></Link>);
+      expect(console.error.calls.length).toBe(6);
+      expect(console.error.calls[5].args[0]).toContain(
+        'See Link > a > ... > Link > a.'
+      );
+    });
+  });
+
 });

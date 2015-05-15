@@ -134,7 +134,7 @@ describe('ReactCompositeComponent-state', function() {
 
   it('should support setting state', function() {
     var container = document.createElement('div');
-    document.documentElement.appendChild(container);
+    document.body.appendChild(container);
 
     var stateListener = mocks.getMockFunction();
     var instance = React.render(
@@ -217,5 +217,33 @@ describe('ReactCompositeComponent-state', function() {
       // state is available within `componentWillUnmount()`
       ['componentWillUnmount', 'blue']
     ]);
+  });
+
+  it('should batch unmounts', function() {
+    var outer;
+    var Inner = React.createClass({
+      render: function() {
+        return <div />;
+      },
+      componentWillUnmount: function() {
+        // This should get silently ignored (maybe with a warning), but it
+        // shouldn't break React.
+        outer.setState({showInner: false});
+      }
+    });
+    var Outer = React.createClass({
+      getInitialState: function() {
+        return {showInner: true};
+      },
+      render: function() {
+        return <div>{this.state.showInner && <Inner />}</div>;
+      }
+    });
+
+    var container = document.createElement('div');
+    outer = React.render(<Outer />, container);
+    expect(() => {
+      React.unmountComponentAtNode(container);
+    }).not.toThrow();
   });
 });

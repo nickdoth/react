@@ -15,11 +15,11 @@ var ChildUpdates;
 var MorphingComponent;
 var React;
 var ReactCurrentOwner;
-var ReactDoNotBindDeprecated;
 var ReactMount;
 var ReactPropTypes;
 var ReactServerRendering;
 var ReactTestUtils;
+var ReactUpdates;
 
 var reactComponentExpect;
 var mocks;
@@ -32,11 +32,11 @@ describe('ReactCompositeComponent', function() {
     reactComponentExpect = require('reactComponentExpect');
     React = require('React');
     ReactCurrentOwner = require('ReactCurrentOwner');
-    ReactDoNotBindDeprecated = require('ReactDoNotBindDeprecated');
     ReactPropTypes = require('ReactPropTypes');
     ReactTestUtils = require('ReactTestUtils');
     ReactMount = require('ReactMount');
     ReactServerRendering = require('ReactServerRendering');
+    ReactUpdates = require('ReactUpdates');
 
     MorphingComponent = React.createClass({
       getInitialState: function() {
@@ -71,13 +71,8 @@ describe('ReactCompositeComponent', function() {
       }
     });
 
-    // Ignore the first warning which is fired by using withContext at all.
-    // That way we don't have to reset and assert it on every subsequent test.
-    // This will be killed soon anyway.
-    console.warn = mocks.getMockFunction();
-    React.withContext({}, function() { });
-
-    spyOn(console, 'warn');
+    console.error = mocks.getMockFunction();
+    spyOn(console, 'error');
   });
 
   it('should support rendering to different child types over time', function() {
@@ -116,7 +111,7 @@ describe('ReactCompositeComponent', function() {
     container.innerHTML = markup;
 
     React.render(<Parent />, container);
-    expect(console.warn).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
   });
 
   it('should react to state changes from callbacks', function() {
@@ -168,9 +163,6 @@ describe('ReactCompositeComponent', function() {
       methodAutoBound: function() {
         return this;
       },
-      methodExplicitlyNotBound: ReactDoNotBindDeprecated.doNotBind(function() {
-        return this;
-      }),
       render: function() {
         return <div></div>;
       }
@@ -187,27 +179,20 @@ describe('ReactCompositeComponent', function() {
     expect(function() {
       mountedInstance.methodAutoBound();
     }).not.toThrow();
-    expect(function() {
-      mountedInstance.methodExplicitlyNotBound();
-    }).not.toThrow();
 
-    expect(console.warn.argsForCall.length).toBe(1);
+    expect(console.error.argsForCall.length).toBe(1);
     var explicitlyBound = mountedInstance.methodToBeExplicitlyBound.bind(
       mountedInstance
     );
-    expect(console.warn.argsForCall.length).toBe(2);
+    expect(console.error.argsForCall.length).toBe(2);
     var autoBound = mountedInstance.methodAutoBound;
-    var explicitlyNotBound = mountedInstance.methodExplicitlyNotBound;
 
     var context = {};
     expect(explicitlyBound.call(context)).toBe(mountedInstance);
     expect(autoBound.call(context)).toBe(mountedInstance);
-    expect(explicitlyNotBound.call(context)).toBe(context);
 
     expect(explicitlyBound.call(mountedInstance)).toBe(mountedInstance);
     expect(autoBound.call(mountedInstance)).toBe(mountedInstance);
-    // This one is the weird one
-    expect(explicitlyNotBound.call(mountedInstance)).toBe(mountedInstance);
 
   });
 
@@ -269,7 +254,7 @@ describe('ReactCompositeComponent', function() {
 
   it('should warn about `forceUpdate` on unmounted components', function() {
     var container = document.createElement('div');
-    document.documentElement.appendChild(container);
+    document.body.appendChild(container);
 
     var Component = React.createClass({
       render: function() {
@@ -283,13 +268,13 @@ describe('ReactCompositeComponent', function() {
     instance = React.render(instance, container);
     instance.forceUpdate();
 
-    expect(console.warn.calls.length).toBe(0);
+    expect(console.error.calls.length).toBe(0);
 
     React.unmountComponentAtNode(container);
 
     instance.forceUpdate();
-    expect(console.warn.calls.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toBe(
+    expect(console.error.calls.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toBe(
       'Warning: forceUpdate(...): Can only update a mounted or ' +
       'mounting component. This usually means you called forceUpdate() on ' +
       'an unmounted component. This is a no-op.'
@@ -298,7 +283,7 @@ describe('ReactCompositeComponent', function() {
 
   it('should warn about `setState` on unmounted components', function() {
     var container = document.createElement('div');
-    document.documentElement.appendChild(container);
+    document.body.appendChild(container);
 
     var Component = React.createClass({
       getInitialState: function() {
@@ -315,12 +300,12 @@ describe('ReactCompositeComponent', function() {
     instance = React.render(instance, container);
     instance.setState({value: 1});
 
-    expect(console.warn.calls.length).toBe(0);
+    expect(console.error.calls.length).toBe(0);
 
     React.unmountComponentAtNode(container);
     instance.setState({value: 2});
-    expect(console.warn.calls.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toBe(
+    expect(console.error.calls.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toBe(
       'Warning: setState(...): Can only update a mounted or ' +
       'mounting component. This usually means you called setState() on an ' +
       'unmounted component. This is a no-op.'
@@ -331,7 +316,7 @@ describe('ReactCompositeComponent', function() {
      function() {
     var cbCalled = false;
     var container = document.createElement('div');
-    document.documentElement.appendChild(container);
+    document.body.appendChild(container);
 
     var Component = React.createClass({
       getInitialState: function() {
@@ -352,16 +337,16 @@ describe('ReactCompositeComponent', function() {
     var instance = React.render(<Component />, container);
 
     instance.setState({value: 1});
-    expect(console.warn.calls.length).toBe(0);
+    expect(console.error.calls.length).toBe(0);
 
     React.unmountComponentAtNode(container);
-    expect(console.warn.calls.length).toBe(0);
+    expect(console.error.calls.length).toBe(0);
     expect(cbCalled).toBe(false);
   });
 
   it('should not allow `setProps` on unmounted components', function() {
     var container = document.createElement('div');
-    document.documentElement.appendChild(container);
+    document.body.appendChild(container);
 
     var Component = React.createClass({
       render: function() {
@@ -376,15 +361,15 @@ describe('ReactCompositeComponent', function() {
     expect(function() {
       instance.setProps({value: 1});
     }).not.toThrow();
-    expect(console.warn.calls.length).toBe(0);
+    expect(console.error.calls.length).toBe(0);
 
     React.unmountComponentAtNode(container);
     expect(function() {
       instance.setProps({value: 2});
     }).not.toThrow();
 
-    expect(console.warn.calls.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toBe(
+    expect(console.error.calls.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toBe(
       'Warning: setProps(...): Can only update a mounted or ' +
       'mounting component. This usually means you called setProps() on an ' +
       'unmounted component. This is a no-op.'
@@ -393,7 +378,7 @@ describe('ReactCompositeComponent', function() {
 
   it('should only allow `setProps` on top-level components', function() {
     var container = document.createElement('div');
-    document.documentElement.appendChild(container);
+    document.body.appendChild(container);
 
     var innerInstance;
 
@@ -493,58 +478,51 @@ describe('ReactCompositeComponent', function() {
     var instance = ReactTestUtils.renderIntoDocument(<Component />);
     instance.setState({bogus: true});
 
-    expect(console.warn.argsForCall.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toBe(
+    expect(console.error.argsForCall.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toBe(
       'Warning: Component.shouldComponentUpdate(): Returned undefined instead of a ' +
       'boolean value. Make sure to return true or false.'
     );
   });
 
-  it('should warn when owner is necessary', function() {
-
-    var Chooser = React.createClass({
+  it('should pass context to children when not owner', function() {
+    var Parent = React.createClass({
       render: function() {
-        return this.props.selection == 1 ? this.props.child1 : this.props.child2;
+        return <Child><Grandchild /></Child>;
       }
     });
 
-    var CoolParent1 = React.createClass({
+    var Child = React.createClass({
+      childContextTypes: {
+        foo: ReactPropTypes.string
+      },
+
+      getChildContext: function() {
+        return {
+          foo: 'bar'
+        };
+      },
+
       render: function() {
-        return <Chooser
-          selection={this.props.selection}
-          child1={<input value='foo' readOnly='true' />}
-          child2={this.props.child2} />;
+        return React.Children.only(this.props.children);
       }
     });
 
-    var CoolParent2 = React.createClass({
+    var Grandchild = React.createClass({
+      contextTypes: {
+        foo: ReactPropTypes.string
+      },
+
       render: function() {
-        return <CoolParent1
-          selection={this.props.selection}
-          child2={<input value='foo' readOnly='true' />} />;
-      }
+        return <div>{this.context.foo}</div>;
+      },
     });
 
-    var div = document.createElement('div');
-    React.render(<CoolParent2 selection={1} />, div);
-    expect(console.warn.argsForCall.length).toBe(0);
-    React.render(<CoolParent2 selection={2} />, div);
-    expect(console.warn.argsForCall.length).toBe(1);
-    React.render(<CoolParent2 selection={1} />, div);
-    React.render(<CoolParent2 selection={2} />, div);
-    expect(console.warn.argsForCall.length).toBe(1);
-
-    expect(console.warn.argsForCall[0][0]).toBe(
-      'Warning: <input /> is being rendered by both CoolParent1 and ' +
-      'CoolParent2 using the same key (null) in the same place. Currently, ' +
-      'this means that they don\'t preserve state. This behavior should be ' +
-      'very rare so we\'re considering deprecating it. Please contact the ' +
-      'React team and explain your use case so that we can take that into ' +
-      'consideration.'
-    );
+    var component = ReactTestUtils.renderIntoDocument(<Parent />);
+    expect(React.findDOMNode(component).innerHTML).toBe('bar');
   });
 
-  it('should pass context', function() {
+  it('should pass context transitively', function() {
     var childInstance = null;
     var grandchildInstance = null;
 
@@ -605,176 +583,62 @@ describe('ReactCompositeComponent', function() {
     reactComponentExpect(grandchildInstance).scalarContextEqual({foo: 'bar', depth: 1});
   });
 
-  it('warn if context keys differ', function() {
-    var Component = React.createClass({
-      contextTypes: {
-        foo: ReactPropTypes.string.isRequired
-      },
+  it('should pass context when re-rendered', function() {
+    var parentInstance = null;
+    var childInstance = null;
 
-      render: function() {
-        return <div />;
-      }
-    });
-
-    React.withContext({foo: 'bar'}, function() {
-      ReactTestUtils.renderIntoDocument(<Component />);
-    });
-
-    expect(console.warn.argsForCall.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toBe(
-      'Warning: owner-based and parent-based contexts differ ' +
-      '(values: `bar` vs `undefined`) for key (foo) ' +
-      'while mounting Component (see: http://fb.me/react-context-by-parent)'
-    );
-
-  });
-
-  it('warn if context values differ', function() {
     var Parent = React.createClass({
       childContextTypes: {
-        foo: ReactPropTypes.string
+        foo: ReactPropTypes.string,
+        depth: ReactPropTypes.number
       },
 
       getChildContext: function() {
         return {
-          foo: "bar"
+          foo: 'bar',
+          depth: 0
         };
       },
 
-      render: function() {
-        return <div>{this.props.children}</div>;
-      }
-    });
-    var Component = React.createClass({
-      contextTypes: {
-        foo: ReactPropTypes.string.isRequired
-      },
-
-      render: function() {
-        return <div />;
-      }
-    });
-
-    var component = React.withContext({foo: 'noise'}, function() {
-      return <Component />;
-    });
-
-    ReactTestUtils.renderIntoDocument(<Parent>{component}</Parent>);
-
-    // Two warnings, one for the component and one for the div
-    // We may want to make this expect one warning in the future
-    expect(console.warn.argsForCall.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toBe(
-      'Warning: owner-based and parent-based contexts differ ' +
-      '(values: `noise` vs `bar`) for key (foo) while mounting Component ' +
-      '(see: http://fb.me/react-context-by-parent)'
-    );
-
-  });
-
-  it('should warn if context values differ on update using withContext', function() {
-    var Parent = React.createClass({
-      childContextTypes: {
-        foo: ReactPropTypes.string
-      },
-
-      getChildContext: function() {
+      getInitialState: function() {
         return {
-          foo: "bar"
+          flag: false
         };
       },
 
       render: function() {
-        return <div>{this.props.children}</div>;
+        var output = <Child />;
+        if (!this.state.flag) {
+          output = <span>Child</span>;
+        }
+        return output;
       }
     });
 
-    var Component = React.createClass({
+    var Child = React.createClass({
       contextTypes: {
-        foo: ReactPropTypes.string.isRequired
+        foo: ReactPropTypes.string,
+        depth: ReactPropTypes.number
       },
 
       render: function() {
-        return <div />;
+        childInstance = this;
+        return <span>Child</span>;
       }
     });
 
-    var div = document.createElement('div');
+    parentInstance = ReactTestUtils.renderIntoDocument(<Parent />);
+    expect(childInstance).toBeNull();
 
-    var componentWithSameContext = React.withContext({foo: 'bar'}, function() {
-      return <Component />;
+    expect(parentInstance.state.flag).toBe(false);
+    ReactUpdates.batchedUpdates(function() {
+        parentInstance.setState({flag: true});
     });
-    React.render(<Parent>{componentWithSameContext}</Parent>, div);
+    expect(parentInstance.state.flag).toBe(true);
 
-    expect(console.warn.argsForCall.length).toBe(0);
+    expect(console.error.argsForCall.length).toBe(0);
 
-    var componentWithDifferentContext = React.withContext({foo: 'noise'}, function() {
-      return <Component />;
-    });
-    React.render(<Parent>{componentWithDifferentContext}</Parent>, div);
-
-    // Two warnings, one for the component and one for the div
-    // We may want to make this expect one warning in the future
-    expect(console.warn.argsForCall.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toBe(
-      'Warning: owner-based and parent-based contexts differ ' +
-      '(values: `noise` vs `bar`) for key (foo) while mounting Component ' +
-      '(see: http://fb.me/react-context-by-parent)'
-    );
-  });
-
-  it('should warn if context values differ on update using wrapper', function() {
-    var Parent = React.createClass({
-      childContextTypes: {
-        foo: ReactPropTypes.string
-      },
-
-      getChildContext: function() {
-        return {
-          foo: "bar"
-        };
-      },
-
-      render: function() {
-        return <div>{this.props.children}</div>;
-      }
-    });
-
-    var Component = React.createClass({
-      contextTypes: {
-        foo: ReactPropTypes.string.isRequired
-      },
-
-      render: function() {
-        return <div />;
-      }
-    });
-
-    var Wrapper = React.createClass({
-      childContextTypes: {
-        foo: ReactPropTypes.string
-      },
-
-      getChildContext: function() {
-        return {foo: this.props.foo};
-      },
-
-      render: function() { return <Parent><Component /></Parent>; }
-
-    });
-
-    var div = document.createElement('div');
-    React.render(<Wrapper foo='bar' />, div);
-    React.render(<Wrapper foo='noise' />, div);
-
-    // Two warnings, one for the component and one for the div
-    // We may want to make this expect one warning in the future
-    expect(console.warn.argsForCall.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toBe(
-      'Warning: owner-based and parent-based contexts differ ' +
-      '(values: `noise` vs `bar`) for key (foo) while mounting Component ' +
-      '(see: http://fb.me/react-context-by-parent)'
-    );
+    reactComponentExpect(childInstance).scalarContextEqual({foo: 'bar', depth: 0});
   });
 
   it('unmasked context propagates through updates', function() {
@@ -864,8 +728,8 @@ describe('ReactCompositeComponent', function() {
     });
 
     ReactTestUtils.renderIntoDocument(<Outer />);
-    expect(console.warn.argsForCall.length).toBe(1);
-    expect(console.warn.argsForCall[0][0]).toBe(
+    expect(console.error.argsForCall.length).toBe(1);
+    expect(console.error.argsForCall[0][0]).toBe(
       'Warning: _renderNewRootComponent(): Render methods should ' +
       'be a pure function of props and state; triggering nested component ' +
       'updates from render is not allowed. If necessary, trigger nested ' +
@@ -974,10 +838,108 @@ describe('ReactCompositeComponent', function() {
     expect(function() {
       ReactTestUtils.renderIntoDocument(<div><NotAComponent /></div>);
     }).toThrow();  // has no method 'render'
-    expect(console.warn.calls.length).toBe(1);
-    expect(console.warn.calls[0].args[0]).toContain(
+    expect(console.error.calls.length).toBe(1);
+    expect(console.error.calls[0].args[0]).toContain(
       'NotAComponent(...): No `render` method found'
     );
+  });
+
+  it('context should be passed down from the parent', function() {
+    var Parent = React.createClass({
+      childContextTypes: {
+        foo: ReactPropTypes.string
+      },
+
+      getChildContext: function() {
+        return {
+          foo: "bar"
+        };
+      },
+
+      render: function() {
+        return <div>{this.props.children}</div>;
+      }
+    });
+
+    var Component = React.createClass({
+      contextTypes: {
+        foo: ReactPropTypes.string.isRequired
+      },
+
+      render: function() {
+        return <div />;
+      }
+    });
+
+    var div = document.createElement('div');
+    React.render(<Parent><Component /></Parent>, div);
+
+    expect(console.error.argsForCall.length).toBe(0);
+  });
+
+  it('should replace state', function() {
+    var Moo = React.createClass({
+      getInitialState: function() {
+        return {x: 1};
+      },
+      render: function() {
+        return <div />;
+      }
+    });
+
+    var moo = ReactTestUtils.renderIntoDocument(<Moo />);
+    moo.replaceState({y: 2});
+    expect('x' in moo.state).toBe(false);
+    expect(moo.state.y).toBe(2);
+  });
+
+  it('should support objects with prototypes as state', function() {
+    var NotActuallyImmutable = function(str) {
+      this.str = str;
+    };
+    NotActuallyImmutable.prototype.amIImmutable = function() {
+      return true;
+    };
+    var Moo = React.createClass({
+      getInitialState: function() {
+        return new NotActuallyImmutable('first');
+      },
+      render: function() {
+        return <div />;
+      }
+    });
+
+    var moo = ReactTestUtils.renderIntoDocument(<Moo />);
+    expect(moo.state.str).toBe('first');
+    expect(moo.state.amIImmutable()).toBe(true);
+
+    var secondState = new NotActuallyImmutable('second');
+    moo.replaceState(secondState);
+    expect(moo.state.str).toBe('second');
+    expect(moo.state.amIImmutable()).toBe(true);
+    expect(moo.state).toBe(secondState);
+
+    moo.setState({str: 'third'});
+    expect(moo.state.str).toBe('third');
+    // Here we lose the prototype.
+    expect(moo.state.amIImmutable).toBe(undefined);
+
+    // When more than one state update is enqueued, we have the same behavior
+    var fifthState = new NotActuallyImmutable('fifth');
+    ReactUpdates.batchedUpdates(function() {
+      moo.setState({str: 'fourth'});
+      moo.replaceState(fifthState);
+    });
+    expect(moo.state).toBe(fifthState);
+
+    // When more than one state update is enqueued, we have the same behavior
+    var sixthState = new NotActuallyImmutable('sixth');
+    ReactUpdates.batchedUpdates(function() {
+      moo.replaceState(sixthState);
+      moo.setState({str: 'seventh'});
+    });
+    expect(moo.state.str).toBe('seventh');
+    expect(moo.state.amIImmutable).toBe(undefined);
   });
 
 });
