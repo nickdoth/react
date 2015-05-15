@@ -19,6 +19,7 @@ var ReactElement = require('ReactElement');
 var ReactUpdates = require('ReactUpdates');
 
 var assign = require('Object.assign');
+var findDOMNode = require('findDOMNode');
 
 var select = ReactElement.createFactory('select');
 
@@ -65,7 +66,7 @@ function selectValueType(props, propName, componentName) {
  */
 function updateOptions(component, propValue) {
   var selectedValue, i, l;
-  var options = component.getDOMNode().options;
+  var options = findDOMNode(component).options;
 
   if (component.props.multiple) {
     selectedValue = {};
@@ -88,7 +89,9 @@ function updateOptions(component, propValue) {
         return;
       }
     }
-    options[0].selected = true;
+    if (options.length) {
+      options[0].selected = true;
+    }
   }
 }
 
